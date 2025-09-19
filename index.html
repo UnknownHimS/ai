@@ -1,177 +1,190 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Sci-Fi AI Chatbot (Multi JSON Loader)</title>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet" />
-<style>
-  body {
-    background: #000;
-    color: #0ff;
-    font-family: 'Orbitron', sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-    flex-direction: column;
-  }
-  #chat {
-    width: 90%;
-    max-width: 600px;
-    height: 70vh;
-    background: #111;
-    border: 1px solid #0ff;
-    padding: 10px;
-    overflow-y: auto;
-    margin-bottom: 10px;
-  }
-  #chat p {
-    margin: 5px 0;
-  }
-  .user {
-    color: #0f0;
-  }
-  .bot {
-    color: #f0f;
-  }
-  #inputArea {
-    width: 90%;
-    max-width: 600px;
-    display: flex;
-  }
-  #inputArea input {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    background: #222;
-    color: #0ff;
-  }
-  #inputArea button {
-    background: #0ff;
-    color: #000;
-    border: none;
-    padding: 10px 20px;
-    cursor: pointer;
-  }
-  #inputArea button:hover {
-    background: #0cc;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sci-Fi AI Chatbot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      background: radial-gradient(circle at center, #000 30%, #111 100%);
+      color: #0ff;
+      font-family: 'Orbitron', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #chat {
+      width: 90%;
+      max-width: 700px;
+      height: 70vh;
+      background: rgba(0, 0, 0, 0.8);
+      border: 2px solid #0ff;
+      padding: 10px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      box-shadow: 0 0 20px #0ff;
+      border-radius: 10px;
+    }
+    #chat p {
+      margin: 5px 0;
+    }
+    .user {
+      color: #0f0;
+    }
+    .bot {
+      color: #f0f;
+    }
+    #inputArea {
+      width: 90%;
+      max-width: 700px;
+      display: flex;
+    }
+    #inputArea input {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: #222;
+      color: #0ff;
+      font-family: 'Orbitron', sans-serif;
+    }
+    #inputArea button {
+      background: #0ff;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-family: 'Orbitron', sans-serif;
+    }
+    #inputArea button:hover {
+      background: #0cc;
+    }
+  </style>
 </head>
 <body>
 
-<div id="chat"></div>
-<div id="inputArea">
-  <input type="text" id="userInput" placeholder="Type a message..." />
-  <button onclick="sendMessage()">Send</button>
-</div>
+  <div id="chat"></div>
+  <div id="inputArea">
+    <input type="text" id="userInput" placeholder="Type a message..." />
+    <button onclick="sendMessage()">Send</button>
+  </div>
 
-<script>
-  const chat = document.getElementById('chat');
-  const input = document.getElementById('userInput');
+  <script>
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('userInput');
 
-  // URLs to your JSON files (replace with your own GitHub raw URLs)
-  const dataFiles = {
-    bible: "https://raw.githubusercontent.com/UnknownHimS/ai/main/bible.json",
-    greetings: "https://raw.githubusercontent.com/UnknownHimS/ai/main/greetings.json",
-    flirting: "https://raw.githubusercontent.com/UnknownHimS/ai/main/flirting.json"
-  };
+    const dataFiles = {
+      bible: "https://raw.githubusercontent.com/YourUsername/YourRepo/main/bible.json"
+    };
 
+    let loadedData = {};
+    let currentContext = null;
 
-  let loadedData = {};  // cache for loaded JSON data
-  let currentContext = null; // to track conversation state
+    function appendMessage(sender, text) {
+      const p = document.createElement('p');
+      p.className = sender;
+      p.textContent = (sender === 'user' ? '🧑 You: ' : '🤖 ShabbyBot: ') + text;
+      chat.appendChild(p);
+      chat.scrollTop = chat.scrollHeight;
+    }
 
-  function appendMessage(sender, text) {
-    const p = document.createElement('p');
-    p.className = sender;
-    p.textContent = (sender === 'user' ? '🧑 You: ' : '🤖 ShabbyBot: ') + text;
-    chat.appendChild(p);
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  async function loadData(category) {
-    if (!loadedData[category]) {
-      try {
-        const response = await fetch(dataFiles[category]);
-        if (response.ok) {
-          const json = await response.json();
-          loadedData[category] = json;
-        } else {
+    async function loadData(category) {
+      if (!loadedData[category]) {
+        try {
+          const response = await fetch(dataFiles[category]);
+          if (response.ok) {
+            const json = await response.json();
+            loadedData[category] = json;
+          } else {
+            loadedData[category] = [];
+          }
+        } catch {
           loadedData[category] = [];
         }
+      }
+      return loadedData[category];
+    }
+
+    function matchKeywords(keywords, text) {
+      return keywords.every(kw => text.includes(kw));
+    }
+
+    async function fetchWikipediaSummary(topic) {
+      const encodedTopic = encodeURIComponent(topic);
+      const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodedTopic}`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data.extract || "No summary available.";
       } catch {
-        loadedData[category] = [];
+        return "Failed to fetch Wikipedia content.";
       }
     }
-    return loadedData[category];
-  }
 
-  // Simple helper to check if all keywords appear in input text
-  function matchKeywords(keywords, text) {
-    return keywords.every(kw => text.includes(kw));
-  }
+    async function getResponse(text) {
+      text = text.toLowerCase();
 
-  async function getResponse(text) {
-    text = text.toLowerCase();
-
-    // Handle context yes/no answers first
-    if (currentContext) {
-      for (const category in loadedData) {
-        const data = loadedData[category];
-        for (const entry of data) {
-          if (entry.required_context === currentContext && entry.keywords) {
-            if (entry.keywords.includes(text)) {
-              currentContext = null; // reset context after use
-              return entry.output;
+      // Handle context-based answers
+      if (currentContext) {
+        for (const category in loadedData) {
+          const data = loadedData[category];
+          for (const entry of data) {
+            if (entry.required_context === currentContext && entry.keywords) {
+              if (entry.keywords.includes(text)) {
+                currentContext = null;
+                return entry.output;
+              }
             }
           }
         }
+        return "I was waiting for a 'yes' or 'no' answer.";
       }
-      return "I was waiting for a 'yes' or 'no' answer.";
-    }
 
-    // Load all data categories to search
-    const categoriesToLoad = Object.keys(dataFiles);
-    // Wait for all to load (or from cache)
-    await Promise.all(categoriesToLoad.map(cat => loadData(cat)));
+      const categoriesToLoad = Object.keys(dataFiles);
+      await Promise.all(categoriesToLoad.map(cat => loadData(cat)));
 
-    // Search for best matching response across all categories
-    for (const category of categoriesToLoad) {
-      const data = loadedData[category];
-      for (const entry of data) {
-        if (entry.__comment) continue; // skip comments
-        if (entry.keywords && matchKeywords(entry.keywords, text)) {
-          if (entry.expecting) {
-            currentContext = entry.id; // set follow-up context
+      for (const category of categoriesToLoad) {
+        const data = loadedData[category];
+        for (const entry of data) {
+          if (entry.__comment) continue;
+          if (entry.keywords && matchKeywords(entry.keywords, text)) {
+            if (entry.expecting) {
+              currentContext = entry.id;
+            }
+
+            // Check for Wikipedia fetch instruction
+            if (entry.output.startsWith("wiki:")) {
+              const wikiTopic = entry.output.replace("wiki:", "").trim();
+              const wikiResponse = await fetchWikipediaSummary(wikiTopic);
+              return wikiResponse;
+            }
+
+            return entry.output;
           }
-          return entry.output;
         }
       }
+
+      return "Sorry, I didn't get that.";
     }
 
-    return "Sorry, I didn't get that.";
-  }
-
-  async function sendMessage() {
-    const text = input.value.trim();
-    if (!text) return;
-
-    appendMessage('user', text);
-    input.value = '';
-
-    const botReply = await getResponse(text);
-    appendMessage('bot', botReply);
-  }
-
-  // Allow pressing Enter to send message
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      sendMessage();
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+      appendMessage('user', text);
+      input.value = '';
+      const botReply = await getResponse(text);
+      appendMessage('bot', botReply);
     }
-  });
-</script>
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  </script>
 
 </body>
 </html>
