@@ -109,13 +109,13 @@
       return loadedData[category];
     }
 
-      function matchKeywords(keywords, text) {
+    function matchKeywords(keywords, text) {
       const lowerText = text.toLowerCase();
       return keywords.every(kw => lowerText.includes(kw.toLowerCase()));
     }
 
     async function fetchWikipediaSummary(topic) {
-      const encodedTopic = encodeURIComponent(topic);
+      const encodedTopic = encodeURIComponent(topic.toLowerCase());
       const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodedTopic}`;
       try {
         const res = await fetch(url);
@@ -127,10 +127,47 @@
       }
     }
 
+    function extractSmartTopic(input) {
+      const original = input.trim().toLowerCase().replace(/[?.,!]/g, '');
+      const stopwords = ['what', 'is', 'are', 'was', 'were', 'who', 'do', 'does', 'did', 'explain', 'define', 'about', 'tell', 'me', 'the', 'a', 'an', 'of', 'it', 'that', 'on', 'in', 'to', 'from', 'by'];
+
+      // Direct pattern: "ChatGPT, what is it"
+      if (original.includes(', what is it')) {
+        return original.split(',')[0].trim();
+      }
+
+      // Common pattern: "What is gravity"
+      if (original.startsWith('what is') || original.startsWith('who is') || original.startsWith('define') || original.startsWith('explain') || original.startsWith('what are')) {
+        const parts = original.split(' ');
+        const filtered = parts.slice(2).filter(word => !stopwords.includes(word));
+        return filtered.join(' ');
+      }
+
+      // Pattern: "what about mars"
+      if (original.startsWith('what about')) {
+        return original.replace('what about', '').trim();
+      }
+
+      // Pattern: "what the ball doing"
+      if (original.startsWith('what the')) {
+        const words = original.split(' ');
+        if (words.length > 2) return words[2];
+      }
+
+      // Pattern: "Tell me about XYZ"
+      if (original.startsWith('tell me about')) {
+        return original.replace('tell me about', '').trim();
+      }
+
+      // Fallback: remove stopwords and take meaningful words
+      const cleaned = original.split(' ').filter(word => !stopwords.includes(word));
+      return cleaned.slice(0, 4).join(' ');
+    }
+
     async function getResponse(text) {
       text = text.toLowerCase();
 
-      // Handle context-based answers
+      // 1. Handle context replies
       if (currentContext) {
         for (const category in loadedData) {
           const data = loadedData[category];
@@ -146,19 +183,18 @@
         return "I was waiting for a 'yes' or 'no' answer.";
       }
 
+      // 2. Load all data categories
       const categoriesToLoad = Object.keys(dataFiles);
       await Promise.all(categoriesToLoad.map(cat => loadData(cat)));
 
+      // 3. Try matching JSON keyword rules
       for (const category of categoriesToLoad) {
         const data = loadedData[category];
         for (const entry of data) {
           if (entry.__comment) continue;
           if (entry.keywords && matchKeywords(entry.keywords, text)) {
-            if (entry.expecting) {
-              currentContext = entry.id;
-            }
+            if (entry.expecting) currentContext = entry.id;
 
-            // Check for Wikipedia fetch instruction
             if (entry.output.startsWith("wiki:")) {
               const wikiTopic = entry.output.replace("wiki:", "").trim();
               const wikiResponse = await fetchWikipediaSummary(wikiTopic);
@@ -168,6 +204,13 @@
             return entry.output;
           }
         }
+      }
+
+      // 4. If no JSON match, try extracting topic and fetch Wikipedia
+      const topic = extractSmartTopic(text);
+      if (topic) {
+        const wikiResponse = await fetchWikipediaSummary(topic);
+        return wikiResponse || "I couldn't find info on that.";
       }
 
       return "Sorry, I didn't get that.";
