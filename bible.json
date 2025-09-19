@@ -194,15 +194,15 @@
     "id": "list_commandments_yes",
     "keywords": ["yes", "please", "sure"],
     "output": "1. You shall have no other gods before me. 
-2. You shall not make idols. 
-3. You shall not misuse the name of the Lord your God. 
-4. Remember the Sabbath day. 
-5. Honor your father and mother. 
-6. You shall not murder. 
-7. You shall not commit adultery. 
-8. You shall not steal. 
-9. You shall not give false testimony against your neighbor. 
-10. You shall not covet your neighbor’s house, wife, servants, animals, or anything that belongs to your neighbor."
- }
+      2. You shall not make idols. 
+      3. You shall not misuse the name of the Lord your God. 
+      4. Remember the Sabbath day. 
+      5. Honor your father and mother. 
+      6. You shall not murder. 
+      7. You shall not commit adultery. 
+      8. You shall not steal. 
+      9. You shall not give false testimony against your neighbor. 
+      10. You shall not covet your neighbor’s house, wife, servants, animals, or anything that belongs to your neighbor."
+  }
 ]
 
