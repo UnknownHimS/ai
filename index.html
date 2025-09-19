@@ -1,285 +1,148 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>baby ai with Bible & Detective Q&A</title>
-<style>
-  body { font-family: Arial, sans-serif; background: #111; color: #0ff; padding: 20px; }
-  input, button { padding: 10px; font-size: 16px; }
-  button { margin-left: 10px; background: #0ff; border: none; color: #000; cursor: pointer; }
-  #chat { max-width: 700px; height: 60vh; overflow-y: auto; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #0ff; }
-  .user { color: #0f0; margin: 5px 0; white-space: pre-wrap; }
-  .bot { color: #f0f; margin: 5px 0; white-space: pre-wrap; }
-  a { color: #0ff; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bible API Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; }
+    select, button { margin: 0.5rem 0; padding: 0.5rem; font-size: 1rem; }
+    #verses { margin-top: 1rem; }
+    .verse { margin-bottom: 0.8rem; }
+    .verse-number { font-weight: bold; margin-right: 0.5rem; }
+  </style>
 </head>
 <body>
+  <h1>Bible API Demo</h1>
 
-<h2>baby ai with Bible & Detective Q&A</h2>
+  <label for="translation">Choose Translation:</label><br/>
+  <select id="translation"></select><br/>
 
-<div id="chat"></div>
+  <label for="book">Choose Book:</label><br/>
+  <select id="book"></select><br/>
 
-<div>
-  <input type="text" id="userInput" placeholder="Ask about a person, Bible verse, detective clue, or type a name..." />
-  <button onclick="sendMessage()">Send</button>
-</div>
+  <label for="chapter">Choose Chapter:</label><br/>
+  <select id="chapter"></select><br/>
 
-<script>
-  const chat = document.getElementById('chat');
-  const input = document.getElementById('userInput');
+  <button id="load">Load Verses</button>
 
-  // State for ambiguous wikipedia matches (for name clarifications)
-  let ambiguousMatches = null;
-  let lastQuery = "";
+  <div id="verses"></div>
 
-  // State for context tracking (Bible & Detective)
-  let activeContext = null;
+  <script>
+    const apiBase = 'https://bible.helloao.org/api';
 
-  // Loaded intents
-  let bibleIntents = [];
-  let detectiveIntents = [];
+    const translationSelect = document.getElementById('translation');
+    const bookSelect = document.getElementById('book');
+    const chapterSelect = document.getElementById('chapter');
+    const loadBtn = document.getElementById('load');
+    const versesDiv = document.getElementById('verses');
 
-  // Replace with your actual raw URLs for the JSON files
-  const BIBLE_JSON_URL = 'https://raw.githubusercontent.com/UnknownHimS/ai/main/bible.json';
-  const DETECTIVE_JSON_URL = 'https://raw.githubusercontent.com/UnknownHimS/ai/main/detective.json';
-
-  // Load Bible intents
-  async function loadBibleIntents() {
-    try {
-      const res = await fetch(BIBLE_JSON_URL);
-      bibleIntents = await res.json();
-      appendMessage('bot', 'Bible Q&A intents loaded.');
-    } catch (e) {
-      appendMessage('bot', 'Failed to load Bible intents.');
-      console.error(e);
-    }
-  }
-
-  // Load Detective intents
-  async function loadDetectiveIntents() {
-    try {
-      const res = await fetch(DETECTIVE_JSON_URL);
-      detectiveIntents = await res.json();
-      appendMessage('bot', 'Detective intents loaded.');
-    } catch (e) {
-      appendMessage('bot', 'Failed to load Detective intents.');
-      console.error(e);
-    }
-  }
-
-  // Load both intents
-  async function loadIntents() {
-    await loadBibleIntents();
-    await loadDetectiveIntents();
-  }
-
-  loadIntents();
-
-  function appendMessage(sender, text) {
-    const p = document.createElement('p');
-    p.className = sender;
-    p.textContent = (sender === 'user' ? '🧑 You: ' : '🤖 ShabbyBot: ') + text;
-    chat.appendChild(p);
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  // Extract date info from snippet parentheses (Wikipedia snippet)
-  function extractDateFromSnippet(snippet) {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = snippet;
-    const cleanText = tempDiv.textContent || "";
-
-    const parenRegex = /\(([^)]+)\)/g;
-    let match;
-    while ((match = parenRegex.exec(cleanText)) !== null) {
-      const content = match[1].trim();
-      // Ignore pure year ranges like 1990–1995
-      if (/^\d{4}[–-]\d{4}$/.test(content)) continue;
-      if (content.match(/\d{4}/)) return content;
-    }
-    return null;
-  }
-
-  // Fetch search results from Wikipedia API
-  async function fetchWikiSearch(topic) {
-    const endpoint = `https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srsearch=${encodeURIComponent(topic)}`;
-    try {
-      const res = await fetch(endpoint);
-      if (!res.ok) return null;
-      const data = await res.json();
-      if (!data.query || !data.query.search || data.query.search.length === 0) return null;
-      return data.query.search;
-    } catch (e) {
-      console.error(e);
-      return null;
-    }
-  }
-
-  // Fetch snippet for a specific title
-  async function fetchSnippetForTitle(title) {
-    const endpoint = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&format=json&origin=*&titles=${encodeURIComponent(title)}`;
-    try {
-      const res = await fetch(endpoint);
-      if (!res.ok) return null;
-      const data = await res.json();
-      const pages = data.query.pages;
-      const page = Object.values(pages)[0];
-      return page.extract || null;
-    } catch (e) {
-      console.error(e);
-      return null;
-    }
-  }
-
-  // Match user input to any intent in given intent list
-  function matchIntent(input, intents) {
-    const inputLower = input.toLowerCase();
-
-    for (const intent of intents) {
-      if (!intent.keywords) continue;
-      const allKeywordsPresent = intent.keywords.every(k => inputLower.includes(k.toLowerCase()));
-      if (allKeywordsPresent) {
-        if (intent.required_context && intent.required_context !== activeContext) {
-          continue;
+    // Fetch available translations and populate dropdown
+    async function loadTranslations() {
+      try {
+        const res = await fetch(`${apiBase}/available_translations.json`);
+        const data = await res.json();
+        // data is an object with keys as translation codes and values as info
+        for (const [key, value] of Object.entries(data)) {
+          const option = document.createElement('option');
+          option.value = key;
+          option.textContent = `${value.name} (${key.toUpperCase()})`;
+          translationSelect.appendChild(option);
         }
-        return intent;
-      }
-    }
-    return null;
-  }
-
-  async function sendMessage() {
-    const userText = input.value.trim();
-    if (!userText) return;
-    appendMessage('user', userText);
-    input.value = '';
-
-    if (ambiguousMatches) {
-      const matchedTitle = ambiguousMatches.find(title => title.toLowerCase() === userText.toLowerCase());
-      if (matchedTitle) {
-        appendMessage('bot', `Fetching info for ${matchedTitle}...`);
-        const snippet = await fetchSnippetForTitle(matchedTitle);
-        const dateInfo = extractDateFromSnippet(snippet || "");
-        let reply = "";
-        if (dateInfo) {
-          reply = `${matchedTitle} dates found: ${dateInfo}`;
-        } else {
-          reply = `${matchedTitle} info: ${snippet || '(No date info found)'}`;
-        }
-        appendMessage('bot', reply);
-        ambiguousMatches = null;
-        lastQuery = matchedTitle;
-        activeContext = null;
-        return;
-      } else {
-        appendMessage('bot', `I couldn't find "${userText}" in the options. Please pick one of the following:\n${ambiguousMatches.join('\n')}`);
-        return;
+      } catch (err) {
+        alert('Failed to load translations: ' + err.message);
       }
     }
 
-    // FIRST try Bible intents
-    let intent = matchIntent(userText, bibleIntents);
-    if (intent) {
-      if (intent.expecting) {
-        activeContext = intent.id;
-      } else {
-        activeContext = null;
-      }
-
-      if (intent.output.startsWith("wiki:")) {
-        const topic = intent.output.slice(5);
-        appendMessage('bot', `Searching Wikipedia for "${topic}"...`);
-        const results = await fetchWikiSearch(topic);
-        if (!results) {
-          appendMessage('bot', `No Wikipedia results found for "${topic}".`);
-          return;
+    // Fetch books for selected translation
+    async function loadBooks(translation) {
+      bookSelect.innerHTML = '';
+      chapterSelect.innerHTML = '';
+      versesDiv.innerHTML = '';
+      try {
+        const res = await fetch(`${apiBase}/${translation}/books.json`);
+        const data = await res.json();
+        // data is an array of book objects [{name, short_name, chapters}]
+        data.forEach(book => {
+          const option = document.createElement('option');
+          option.value = book.short_name;
+          option.textContent = book.name;
+          bookSelect.appendChild(option);
+        });
+        // Auto load chapters for first book
+        if (data.length > 0) {
+          loadChapters(translation, data[0].short_name);
         }
-        const single = results[0];
-        const snippet = single.snippet;
-        const title = single.title;
-        const dateInfo = extractDateFromSnippet(snippet);
-
-        if (dateInfo) {
-          appendMessage('bot', `${title} dates found: ${dateInfo}`);
-        } else {
-          appendMessage('bot', `${title} info: ${snippet.replace(/<\/?[^>]+(>|$)/g, "")}... (No date info found)`);
-        }
-      } else {
-        appendMessage('bot', intent.output);
+      } catch (err) {
+        alert('Failed to load books: ' + err.message);
       }
-      return;
     }
 
-    // THEN try Detective intents
-    intent = matchIntent(userText, detectiveIntents);
-    if (intent) {
-      if (intent.expecting) {
-        activeContext = intent.id;
-      } else {
-        activeContext = null;
-      }
+    // Load chapters for selected book
+    async function loadChapters(translation, book) {
+      chapterSelect.innerHTML = '';
+      versesDiv.innerHTML = '';
+      try {
+        const res = await fetch(`${apiBase}/${translation}/${book}/1.json`);
+        if (!res.ok) throw new Error('Chapter not found');
+        const data = await res.json();
+        // data.verses is an array, so length = chapter length, but API might not give chapter count
+        // So we can guess chapter count by trying next chapters until fail OR
+        // The books.json has chapters count per book, let's use that:
+        const booksRes = await fetch(`${apiBase}/${translation}/books.json`);
+        const books = await booksRes.json();
+        const bookData = books.find(b => b.short_name === book);
+        if (!bookData) throw new Error('Book data missing');
 
-      if (intent.output.startsWith("wiki:")) {
-        const topic = intent.output.slice(5);
-        appendMessage('bot', `Searching Wikipedia for "${topic}"...`);
-        const results = await fetchWikiSearch(topic);
-        if (!results) {
-          appendMessage('bot', `No Wikipedia results found for "${topic}".`);
-          return;
+        for (let i = 1; i <= bookData.chapters; i++) {
+          const option = document.createElement('option');
+          option.value = i;
+          option.textContent = i;
+          chapterSelect.appendChild(option);
         }
-        const single = results[0];
-        const snippet = single.snippet;
-        const title = single.title;
-        const dateInfo = extractDateFromSnippet(snippet);
-
-        if (dateInfo) {
-          appendMessage('bot', `${title} dates found: ${dateInfo}`);
-        } else {
-          appendMessage('bot', `${title} info: ${snippet.replace(/<\/?[^>]+(>|$)/g, "")}... (No date info found)`);
-        }
-      } else {
-        appendMessage('bot', intent.output);
+      } catch (err) {
+        alert('Failed to load chapters: ' + err.message);
       }
-      return;
     }
 
-    // If no intent matched, fallback to Wikipedia search
-    appendMessage('bot', 'Searching Wikipedia...');
-    lastQuery = userText;
-    activeContext = null;
-
-    const results = await fetchWikiSearch(userText);
-    if (!results) {
-      appendMessage('bot', `No results found for "${userText}".`);
-      return;
+    // Load verses for selected translation, book, chapter
+    async function loadVerses(translation, book, chapter) {
+      versesDiv.innerHTML = 'Loading...';
+      try {
+        const res = await fetch(`${apiBase}/${translation}/${book}/${chapter}.json`);
+        if (!res.ok) throw new Error('Chapter not found');
+        const data = await res.json();
+        versesDiv.innerHTML = '';
+        data.verses.forEach(v => {
+          const verseEl = document.createElement('div');
+          verseEl.className = 'verse';
+          verseEl.innerHTML = `<span class="verse-number">${v.verse}.</span> ${v.text}`;
+          versesDiv.appendChild(verseEl);
+        });
+      } catch (err) {
+        versesDiv.innerHTML = 'Failed to load verses: ' + err.message;
+      }
     }
 
-    if (results.length > 1) {
-      const titles = results.slice(0, 5).map(r => r.title);
-      ambiguousMatches = titles;
+    // Event Listeners
+    translationSelect.addEventListener('change', e => {
+      loadBooks(e.target.value);
+    });
 
-      appendMessage('bot', `I found multiple matches for "${userText}":\n${titles.map((t, i) => `${i+1}. ${t}`).join('\n')}\nPlease type the exact name to clarify.`);
-      return;
-    }
+    bookSelect.addEventListener('change', e => {
+      loadChapters(translationSelect.value, e.target.value);
+    });
 
-    // Single result
-    const single = results[0];
-    const snippet = single.snippet;
-    const title = single.title;
-    const dateInfo = extractDateFromSnippet(snippet);
+    loadBtn.addEventListener('click', () => {
+      loadVerses(translationSelect.value, bookSelect.value, chapterSelect.value);
+    });
 
-    if (dateInfo) {
-      appendMessage('bot', `${title} dates found: ${dateInfo}`);
-    } else {
-      appendMessage('bot', `${title} info: ${snippet.replace(/<\/?[^>]+(>|$)/g, "")}... (No date info found)`);
-    }
-  }
-
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') sendMessage();
-  });
-</script>
-
+    // Initial load
+    loadTranslations().then(() => {
+      if (translationSelect.value) {
+        loadBooks(translationSelect.value);
+      }
+    });
+  </script>
 </body>
 </html>
