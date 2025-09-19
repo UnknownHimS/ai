@@ -3,175 +3,200 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>baby ai</title>
+  <title>Sci-Fi AI Chatbot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet" />
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #121212; color: #0ff; }
-    input { padding: 8px; width: 300px; border-radius: 4px; border: 1px solid #0ff; background: #222; color: #0ff; }
-    button { padding: 8px 12px; border-radius: 4px; border: none; background: #0ff; color: #000; cursor: pointer; }
-    button:hover { background: #0cc; }
-    .result { margin-top: 20px; }
-    .result-item { margin-bottom: 15px; background: #111; padding: 15px; border-radius: 8px; box-shadow: 0 0 8px #0ff; }
-    .result-item a { font-weight: bold; color: #0ff; text-decoration: none; font-size: 1.2em; }
-    .result-item p { margin: 10px 0 0; }
+    body {
+      background: radial-gradient(circle at center, #000 30%, #111 100%);
+      color: #0ff;
+      font-family: 'Orbitron', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #chat {
+      width: 90%;
+      max-width: 700px;
+      height: 70vh;
+      background: rgba(0, 0, 0, 0.8);
+      border: 2px solid #0ff;
+      padding: 10px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      box-shadow: 0 0 20px #0ff;
+      border-radius: 10px;
+    }
+    #chat p {
+      margin: 5px 0;
+    }
+    .user {
+      color: #0f0;
+    }
+    .bot {
+      color: #f0f;
+    }
+    #inputArea {
+      width: 90%;
+      max-width: 700px;
+      display: flex;
+    }
+    #inputArea input {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: #222;
+      color: #0ff;
+      font-family: 'Orbitron', sans-serif;
+    }
+    #inputArea button {
+      background: #0ff;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-family: 'Orbitron', sans-serif;
+    }
+    #inputArea button:hover {
+      background: #0cc;
+    }
   </style>
 </head>
 <body>
+  <h1>Please use proper spelling; this chatbot is still learning.</h1>
 
-  <h1>Baby ai</h1>
-  <input type="text" id="searchInput" placeholder="Enter your question or topic" />
-  <button onclick="searchWikipedia()">Search</button>
-
-  <div id="results" class="result"></div>
+  <div id="chat"></div>
+  <div id="inputArea">
+    <input type="text" id="userInput" placeholder="Type a message..." />
+    <button onclick="sendMessage()">Send</button>
+  </div>
 
 <script>
-  const stopwords = [
-    'what', 'who', 'when', 'where', 'how', 'why', 'born', 'died',
-    'is', 'are', 'was', 'were', 'the', 'a', 'an', 'of', 'on', 'in',
-    'to', 'by', 'for', 'about', 'do', 'does', 'did', 'explain', 'define',
-    'tell', 'me', 'it', 'that', 'you', 'please', 'show', 'give', 'information', 'is', 'good', 'about'
-  ];
+  const chat = document.getElementById('chat');
+  const input = document.getElementById('userInput');
 
-  function extractTopic(input) {
-    let words = input.toLowerCase().replace(/[?.,!]/g, '').split(' ');
-    let filtered = words.filter(w => !stopwords.includes(w));
-    return filtered.slice(0, 5).join(' ');
+  function appendMessage(sender, text) {
+    const p = document.createElement('p');
+    p.className = sender;
+    p.textContent = (sender === 'user' ? '🧑 You: ' : '🤖 ShabbyBot: ') + text;
+    chat.appendChild(p);
+    chat.scrollTop = chat.scrollHeight;
   }
 
-  function detectIntent(input) {
-    const lower = input.toLowerCase();
-    if (lower.includes('born') || (lower.includes('when') && lower.includes('born'))) return 'born';
-    if (lower.includes('died') || (lower.includes('when') && lower.includes('died'))) return 'died';
+  // Detect intent from user input
+  function detectIntent(text) {
+    const lower = text.toLowerCase();
+    if (lower.includes('born')) return 'born';
+    if (lower.includes('died')) return 'died';
+    if (lower.includes('when')) return 'when';
     if (lower.includes('who')) return 'who';
     if (lower.includes('where')) return 'where';
     if (lower.includes('how')) return 'how';
     if (lower.includes('why')) return 'why';
-    return 'default';
+    if (lower.includes('what')) return 'what';
+    return 'what';
   }
 
-  function formatDate(dateString) {
-    try {
-      const d = new Date(dateString);
-      if (isNaN(d)) return null;
-      return d.toDateString();
-    } catch {
-      return null;
-    }
+  // Extract topic by removing question words and filler words
+  function extractTopic(input) {
+    const stopwords = [
+      'what','who','when','where','how','why',
+      'born','died','is','are','was','were',
+      'the','a','an','of','on','in','to','by','for','about',
+      'do','does','did','explain','define','tell','me','it','that','you',
+      'please','can','could','would','show','give','find'
+    ];
+    const words = input.toLowerCase()
+      .replace(/[?.,!]/g, '')
+      .split(' ')
+      .filter(w => !stopwords.includes(w));
+    return words.join(' ').trim();
   }
 
-  async function fetchWikidataBirthDeath(entityId) {
-    const url = `https://www.wikidata.org/wiki/Special:EntityData/${entityId}.json`;
+  // Extract birth/death dates from Wikipedia summary text
+  function extractBirthDeath(summary) {
+    const match = summary.match(/\(([^)]+)\)/);
+    if (!match) return null;
+    const dates = match[1].split('–').map(s => s.trim());
+    return {
+      birthDate: dates[0] || null,
+      deathDate: dates[1] || null
+    };
+  }
+
+  // Fetch Wikipedia summary for topic
+  async function fetchWikiSummary(topic) {
+    if (!topic) return "I couldn't figure out what to search for.";
+
+    // Capitalize first letter of each word (Wikipedia expects that)
+    const capitalizedTopic = topic
+      .split(' ')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+
+    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(capitalizedTopic)}`;
+
     try {
       const res = await fetch(url);
-      if (!res.ok) return null;
+      if (!res.ok) return `I couldn't find anything about "${capitalizedTopic}".`;
+
       const data = await res.json();
-      const entity = data.entities[entityId];
-      const claims = entity.claims;
 
-      let birthDate = null;
-      let deathDate = null;
-
-      // P569 = date of birth
-      if (claims.P569 && claims.P569[0].mainsnak.datavalue) {
-        birthDate = claims.P569[0].mainsnak.datavalue.value.time;
+      if (data.extract) {
+        return data.extract;
+      } else {
+        return `I found a page but no summary for "${capitalizedTopic}".`;
       }
-      // P570 = date of death
-      if (claims.P570 && claims.P570[0].mainsnak.datavalue) {
-        deathDate = claims.P570[0].mainsnak.datavalue.value.time;
-      }
-
-      return {
-        birthDate: birthDate ? formatDate(birthDate.replace('+', '')) : null,
-        deathDate: deathDate ? formatDate(deathDate.replace('+', '')) : null
-      };
     } catch (e) {
       console.error(e);
-      return null;
+      return "There was a problem fetching info from Wikipedia.";
     }
   }
 
-  async function searchWikipedia() {
-    const rawQuery = document.getElementById('searchInput').value.trim();
-    const resultsDiv = document.getElementById('results');
+  // Main chatbot response function
+  async function getResponse(inputText) {
+    const intent = detectIntent(inputText);
+    const topic = extractTopic(inputText);
 
-    if (!rawQuery) {
-      alert('Please enter a search term');
-      return;
+    const summary = await fetchWikiSummary(topic);
+
+    // If the intent is born or when + born, try to extract birth date
+    if (intent === 'born' || (intent === 'when' && inputText.toLowerCase().includes('born'))) {
+      const dates = extractBirthDeath(summary);
+      if (dates && dates.birthDate) {
+        return `${topic.charAt(0).toUpperCase() + topic.slice(1)} was born on ${dates.birthDate}.`;
+      }
     }
 
-    resultsDiv.innerHTML = 'Loading...';
-
-    const topic = extractTopic(rawQuery);
-    if (!topic) {
-      resultsDiv.innerHTML = 'Could not extract a valid topic from your input.';
-      return;
+    // If the intent is died or when + died, try to extract death date
+    if (intent === 'died' || (intent === 'when' && inputText.toLowerCase().includes('died'))) {
+      const dates = extractBirthDeath(summary);
+      if (dates && dates.deathDate) {
+        return `${topic.charAt(0).toUpperCase() + topic.slice(1)} died on ${dates.deathDate}.`;
+      }
     }
 
-    const searchEndpoint = `https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srsearch=${encodeURIComponent(topic.toLowerCase())}`;
-
-    try {
-      const searchResponse = await fetch(searchEndpoint);
-      const searchData = await searchResponse.json();
-
-      if (!searchData.query.search.length) {
-        resultsDiv.innerHTML = `No Wikipedia page found for "<strong>${topic}</strong>".`;
-        return;
-      }
-
-      const topTitle = searchData.query.search[0].title;
-
-      // Fetch page summary
-      const summaryEndpoint = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(topTitle)}`;
-      const summaryResponse = await fetch(summaryEndpoint);
-
-      if (!summaryResponse.ok) {
-        resultsDiv.innerHTML = `No summary found for "<strong>${topTitle}</strong>".`;
-        return;
-      }
-
-      const summaryData = await summaryResponse.json();
-      const intent = detectIntent(rawQuery);
-
-      // If intent is born or died, try Wikidata for exact dates
-      let extraInfo = '';
-      if (intent === 'born' || intent === 'died') {
-        if (summaryData.wikidata_item) {
-          const dates = await fetchWikidataBirthDeath(summaryData.wikidata_item);
-          if (dates) {
-            if (intent === 'born' && dates.birthDate) {
-              extraInfo = `<p><strong>Born:</strong> ${dates.birthDate}</p>`;
-            }
-            if (intent === 'died' && dates.deathDate) {
-              extraInfo = `<p><strong>Died:</strong> ${dates.deathDate}</p>`;
-            }
-          }
-        }
-      }
-
-      // For other intents or if no date found, just show summary (or filtered)
-      let displayText = summaryData.extract;
-      if ((intent === 'born' || intent === 'died') && !extraInfo) {
-        // fallback: try regex in summary
-        const regex = intent === 'born' ? /born[^.,;]*[.,;]/i : /died[^.,;]*[.,;]/i;
-        const match = summaryData.extract.match(regex);
-        if (match) displayText = match[0];
-      } else if (intent === 'who') {
-        displayText = summaryData.extract.split('. ')[0] + '.';
-      }
-
-      resultsDiv.innerHTML = `
-        <div class="result-item">
-          <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(topTitle)}" target="_blank" rel="noopener">${summaryData.title}</a>
-          <p>${displayText}</p>
-          ${extraInfo}
-        </div>
-      `;
-
-    } catch (error) {
-      console.error(error);
-      resultsDiv.innerHTML = 'An error occurred while fetching data.';
-    }
+    // Default: return the summary (or fallback)
+    return summary;
   }
+
+  async function sendMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+
+    appendMessage('user', text);
+    input.value = '';
+
+    const reply = await getResponse(text);
+    appendMessage('bot', reply);
+  }
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendMessage();
+  });
 </script>
-
 </body>
 </html>
