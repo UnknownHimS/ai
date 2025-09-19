@@ -74,202 +74,166 @@
     <button onclick="sendMessage()">Send</button>
   </div>
 
-  <script>
-    const chat = document.getElementById('chat');
-    const input = document.getElementById('userInput');
+ <script>
+  const chat = document.getElementById('chat');
+  const input = document.getElementById('userInput');
 
-    const dataFiles = {
-      bible: "https://raw.githubusercontent.com/UnknownHimS/ai/main/bible.json"
-    };
+  const dataFiles = {
+    bible: "https://raw.githubusercontent.com/UnknownHimS/ai/main/bible.json"
+  };
 
-    let loadedData = {};
-    let currentContext = null;
+  let loadedData = {};
+  let currentContext = null;
 
-    function appendMessage(sender, text) {
-      const p = document.createElement('p');
-      p.className = sender;
-      p.textContent = (sender === 'user' ? '🧑 You: ' : '🤖 ShabbyBot: ') + text;
-      chat.appendChild(p);
-      chat.scrollTop = chat.scrollHeight;
-    }
+  function appendMessage(sender, text) {
+    const p = document.createElement('p');
+    p.className = sender;
+    p.textContent = (sender === 'user' ? '🧑 You: ' : '🤖 ShabbyBot: ') + text;
+    chat.appendChild(p);
+    chat.scrollTop = chat.scrollHeight;
+  }
 
-    async function loadData(category) {
-      if (!loadedData[category]) {
-        try {
-          const response = await fetch(dataFiles[category]);
-          if (response.ok) {
-            const json = await response.json();
-            loadedData[category] = json;
-          } else {
-            loadedData[category] = [];
-          }
-        } catch {
+  async function loadData(category) {
+    if (!loadedData[category]) {
+      try {
+        const response = await fetch(dataFiles[category]);
+        if (response.ok) {
+          const json = await response.json();
+          loadedData[category] = json;
+        } else {
           loadedData[category] = [];
         }
+      } catch {
+        loadedData[category] = [];
       }
-      return loadedData[category];
     }
-
-    function matchKeywords(keywords, text) {
-      const lowerText = text.toLowerCase();
-      return keywords.every(kw => lowerText.includes(kw.toLowerCase()));
-    }
-
-    function detectIntent(input) {
-      const text = input.toLowerCase();
-      if (text.includes("when")) return "when";
-      if (text.includes("who")) return "who";
-      if (text.includes("where")) return "where";
-      if (text.includes("how")) return "how";
-      if (text.includes("why")) return "why";
-      return "what";
-    }
-
-    function extractSmartTopic(input) {
-      const original = input.trim().toLowerCase().replace(/[?.,!]/g, '');
-      const stopwords = ['what','is','are','was','were','who','do','does','did','explain','define','about','tell','me','the','a','an','of','it','that','on','in','to','from','by','you'];
-
-      const cleaned = original.split(' ').filter(word => !stopwords.includes(word));
-      return cleaned.slice(0, 4).join(' ');
-    }
-
-    async function fetchWikiWithIntent(input) {
-  const topic = extractSmartTopic(input);
-  if (!topic) return "I couldn't figure out what to search for.";
-
-  const encodedTopic = encodeURIComponent(topic);
-  const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodedTopic}`;
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) {
-      return `I couldn't find anything about "${topic}".`;
-    }
-
-    const data = await res.json();
-
-    if (data.type === 'disambiguation') {
-      return `Hmm... "${topic}" could mean several things. Can you be more specific?\n\nFor example: ${data.title}`;
-    }
-
-    const summary = data.extract || "No summary available.";
-    const intent = detectIntent(input);
-
-    // Customize responses based on question intent
-    switch (intent) {
-      case 'when': {
-        const match = summary.match(/\b(1[0-9]{3}|2[0-9]{3})\b/);
-        return match ? `It happened in ${match[0]}.` : summary;
-      }
-
-      case 'who': {
-        const whoMatch = summary.match(/^([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)/);
-        return whoMatch ? `It was ${whoMatch[1]}.` : summary;
-      }
-
-      case 'where': {
-        const whereMatch = summary.match(/in\s([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/);
-        return whereMatch ? `It happened in ${whereMatch[1]}.` : summary;
-      }
-
-      case 'why': {
-        const whyMatch = summary.match(/because\s(.+?)\./i);
-        return whyMatch ? `Because ${whyMatch[1]}.` : summary;
-      }
-
-      case 'how': {
-        const howMatch = summary.match(/by\s(.+?)\./i);
-        return howMatch ? `It happens by ${howMatch[1]}.` : summary;
-      }
-
-      default:
-        return summary;
-    }
-  } catch (err) {
-    console.error(err);
-    return "There was a problem fetching info from Wikipedia.";
+    return loadedData[category];
   }
-}
+
+  function matchKeywords(keywords, text) {
+    const lowerText = text.toLowerCase();
+    return keywords.every(kw => lowerText.includes(kw.toLowerCase()));
+  }
+
+  function detectIntent(input) {
+    const text = input.toLowerCase();
+    if (text.includes("when")) return "when";
+    if (text.includes("who")) return "who";
+    if (text.includes("where")) return "where";
+    if (text.includes("how")) return "how";
+    if (text.includes("why")) return "why";
+    return "what";
+  }
+
+  function extractSmartTopic(input) {
+    const original = input.trim().toLowerCase().replace(/[?.,!]/g, '');
+    const stopwords = ['what','is','are','was','were','who','do','does','did','explain','define','about','tell','me','the','a','an','of','it','that','on','in','to','from','by','you'];
+    const cleaned = original.split(' ').filter(word => !stopwords.includes(word));
+    return cleaned.slice(0, 4).join(' ');
+  }
+
+  async function fetchWikiWithIntent(input) {
+    const topic = extractSmartTopic(input);
+    if (!topic) return "I couldn't figure out what to search for.";
+
+    const encodedTopic = encodeURIComponent(topic);
+    const url = `https://en.wikipedia.org/wiki/${encodeURIComponent(topic)}`;
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return `I couldn't find anything about "${topic}".`;
+
+      const data = await res.json();
+
+      if (data.type === 'disambiguation') {
+        return `Hmm... "${topic}" could mean several things. Can you be more specific?\n\nFor example: ${data.title}`;
+      }
+
+      const summary = data.extract || "No summary available.";
+      const intent = detectIntent(input);
+
+      switch (intent) {
+        case 'when': {
+          const match = summary.match(/\b(1[0-9]{3}|2[0-9]{3})\b/);
+          return match ? `It happened in ${match[0]}.` : summary;
+        }
+        case 'who': {
+          const whoMatch = summary.match(/^([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)/);
+          return whoMatch ? `It was ${whoMatch[1]}.` : summary;
+        }
+        case 'where': {
+          const whereMatch = summary.match(/in\s([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/);
+          return whereMatch ? `It happened in ${whereMatch[1]}.` : summary;
+        }
+        case 'why': {
+          const whyMatch = summary.match(/because\s(.+?)\./i);
+          return whyMatch ? `Because ${whyMatch[1]}.` : summary;
+        }
+        case 'how': {
+          const howMatch = summary.match(/by\s(.+?)\./i);
+          return howMatch ? `It happens by ${howMatch[1]}.` : summary;
+        }
+        default:
+          return summary;
+      }
+    } catch (err) {
+      console.error(err);
+      return "There was a problem fetching info from Wikipedia.";
+    }
+  }
 
   async function getResponse(text) {
-  text = text.toLowerCase();
+    text = text.toLowerCase();
 
-  // Handle context
-  if (currentContext) {
-    for (const category in loadedData) {
-      const data = loadedData[category];
-      for (const entry of data) {
-        if (entry.required_context === currentContext && entry.keywords) {
-          if (entry.keywords.includes(text)) {
-            currentContext = null;
-            return entry.output;
-          }
-        }
-      }
-    }
-    return "I was waiting for a 'yes' or 'no' answer.";
-  }
-
-  // Load JSONs
-  const categoriesToLoad = Object.keys(dataFiles);
-  await Promise.all(categoriesToLoad.map(cat => loadData(cat)));
-
-  // Match predefined data
-  for (const category of categoriesToLoad) {
-    const data = loadedData[category];
-    for (const entry of data) {
-      if (entry.__comment) continue;
-      if (entry.keywords && matchKeywords(entry.keywords, text)) {
-        if (entry.expecting) currentContext = entry.id;
-        if (entry.output.startsWith("wiki:")) {
-          const topic = entry.output.replace("wiki:", "").trim();
-          return await fetchWikiWithIntent(topic);
-        }
-        return entry.output;
-      }
-    }
-  }
-
-  // Fallback: Try smart Wikipedia fetch
-  return await fetchWikiWithIntent(text);
-}
-
-      // Load JSONs
-      const categoriesToLoad = Object.keys(dataFiles);
-      await Promise.all(categoriesToLoad.map(cat => loadData(cat)));
-
-      // Check against JSON
-      for (const category of categoriesToLoad) {
+    if (currentContext) {
+      for (const category in loadedData) {
         const data = loadedData[category];
         for (const entry of data) {
-          if (entry.__comment) continue;
-          if (entry.keywords && matchKeywords(entry.keywords, text)) {
-            if (entry.expecting) currentContext = entry.id;
-            if (entry.output.startsWith("wiki:")) {
-              const topic = entry.output.replace("wiki:", "").trim();
-              return await fetchWikiWithIntent(topic);
+          if (entry.required_context === currentContext && entry.keywords) {
+            if (entry.keywords.includes(text)) {
+              currentContext = null;
+              return entry.output;
             }
-            return entry.output;
           }
         }
       }
-
-      // Fallback to smart wiki fetch
-      return await fetchWikiWithIntent(text);
+      return "I was waiting for a 'yes' or 'no' answer.";
     }
 
-    async function sendMessage() {
-      const text = input.value.trim();
-      if (!text) return;
-      appendMessage('user', text);
-      input.value = '';
-      const botReply = await getResponse(text);
-      appendMessage('bot', botReply);
+    const categoriesToLoad = Object.keys(dataFiles);
+    await Promise.all(categoriesToLoad.map(cat => loadData(cat)));
+
+    for (const category of categoriesToLoad) {
+      const data = loadedData[category];
+      for (const entry of data) {
+        if (entry.__comment) continue;
+        if (entry.keywords && matchKeywords(entry.keywords, text)) {
+          if (entry.expecting) currentContext = entry.id;
+          if (entry.output.startsWith("wiki:")) {
+            const topic = entry.output.replace("wiki:", "").trim();
+            return await fetchWikiWithIntent(topic);
+          }
+          return entry.output;
+        }
+      }
     }
 
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') sendMessage();
-    });
-  </script>
+    return await fetchWikiWithIntent(text);
+  }
+
+  async function sendMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+    appendMessage('user', text);
+    input.value = '';
+    const botReply = await getResponse(text);
+    appendMessage('bot', botReply);
+  }
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendMessage();
+  });
+</script>
+
 </body>
 </html>
