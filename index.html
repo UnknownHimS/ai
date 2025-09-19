@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>baby ai with Bible Q&A</title>
+<title>baby ai with Bible & Detective Q&A</title>
 <style>
   body { font-family: Arial, sans-serif; background: #111; color: #0ff; padding: 20px; }
   input, button { padding: 10px; font-size: 16px; }
@@ -16,12 +16,12 @@
 </head>
 <body>
 
-<h2>baby ai with Bible Q&A</h2>
+<h2>baby ai with Bible & Detective Q&A</h2>
 
 <div id="chat"></div>
 
 <div>
-  <input type="text" id="userInput" placeholder="Ask about a person, Bible verse, or type a name..." />
+  <input type="text" id="userInput" placeholder="Ask about a person, Bible verse, detective clue, or type a name..." />
   <button onclick="sendMessage()">Send</button>
 </div>
 
@@ -33,33 +33,23 @@
   let ambiguousMatches = null;
   let lastQuery = "";
 
-  // State for Bible Q&A context tracking
+  // State for context tracking (Bible & Detective)
   let activeContext = null;
 
-  // Loaded Bible intents
+  // Loaded intents
   let bibleIntents = [];
+  let detectiveIntents = [];
+  let combinedIntents = [];
 
-  // Load bible.json from your GitHub raw URL (replace with your actual raw URL!)
-  const BIBLE_JSON_URL = 'https://raw.githubusercontent.com/yourusername/yourrepo/main/bible.json';
+  // Replace with your actual raw URLs for the JSON files
+  const BIBLE_JSON_URL = 'https://raw.githubusercontent.com/UnknownHimS/ai/main/bible.json';
+  const DETECTIVE_JSON_URL = 'https://raw.githubusercontent.com/UnknownHimS/ai/main/detective.json';
 
-  // For testing, I'll use a sample small bible.json inline instead since I can't fetch in this environment
-  // Replace this with fetch(BIBLE_JSON_URL) in your real app
+  // Load Bible intents
   async function loadBibleIntents() {
     try {
-      // const res = await fetch(BIBLE_JSON_URL);
-      // bibleIntents = await res.json();
-
-      // Sample from your provided bible.json to demo here:
-      bibleIntents = [
-        { "id": "ask_bible_verse", "keywords": ["bible", "know"], "output": "Do you want me to share a Bible verse?", "expecting": ["yes", "no"] },
-        { "id": "bible_yes", "keywords": ["yes"], "output": "Alright, here’s a verse for you: 'Love your neighbor as yourself.' — Matthew 22:39.", "required_context": "ask_bible_verse" },
-        { "id": "bible_no", "keywords": ["no"], "output": "Okay, should we discuss another topic?", "required_context": "ask_bible_verse" },
-        { "id": "give_bible", "keywords": ["give", "bible"], "output": "You want me to give you a Bible verse? Here’s one: 'Trust in the Lord with all your heart.' — Proverbs 3:5." },
-        { "id": "chatgpt_wiki", "keywords": ["what", "chatgpt"], "output": "wiki:ChatGPT" },
-        { "id": "ai_wiki", "keywords": ["what", "artificial", "intelligence"], "output": "wiki:Artificial intelligence" },
-        { "id": "planet_wiki", "keywords": ["what", "planet", "mars"], "output": "wiki:Mars" }
-      ];
-
+      const res = await fetch(BIBLE_JSON_URL);
+      bibleIntents = await res.json();
       appendMessage('bot', 'Bible Q&A intents loaded.');
     } catch (e) {
       appendMessage('bot', 'Failed to load Bible intents.');
@@ -67,7 +57,26 @@
     }
   }
 
-  loadBibleIntents();
+  // Load Detective intents
+  async function loadDetectiveIntents() {
+    try {
+      const res = await fetch(DETECTIVE_JSON_URL);
+      detectiveIntents = await res.json();
+      appendMessage('bot', 'Detective intents loaded.');
+    } catch (e) {
+      appendMessage('bot', 'Failed to load Detective intents.');
+      console.error(e);
+    }
+  }
+
+  // Load both intents and combine
+  async function loadIntents() {
+    await loadBibleIntents();
+    await loadDetectiveIntents();
+    combinedIntents = [...bibleIntents, ...detectiveIntents];
+  }
+
+  loadIntents();
 
   function appendMessage(sender, text) {
     const p = document.createElement('p');
@@ -125,18 +134,17 @@
     }
   }
 
-  // Check if user input matches a Bible intent
-  function matchBibleIntent(input) {
+  // Match user input to any intent (Bible or Detective)
+  function matchIntent(input) {
     const inputLower = input.toLowerCase();
 
-    // Filter intents where all keywords appear in input
-    for (const intent of bibleIntents) {
+    for (const intent of combinedIntents) {
       if (!intent.keywords) continue;
       const allKeywordsPresent = intent.keywords.every(k => inputLower.includes(k.toLowerCase()));
       if (allKeywordsPresent) {
         // Check required context if any
         if (intent.required_context && intent.required_context !== activeContext) {
-          continue; // context mismatch
+          continue;
         }
         return intent;
       }
@@ -150,9 +158,8 @@
     appendMessage('user', userText);
     input.value = '';
 
-    // If we have ambiguous matches waiting for clarification:
+    // If waiting for ambiguous name clarification
     if (ambiguousMatches) {
-      // Check if userText matches one of the saved titles
       const matchedTitle = ambiguousMatches.find(title => title.toLowerCase() === userText.toLowerCase());
       if (matchedTitle) {
         appendMessage('bot', `Fetching info for ${matchedTitle}...`);
@@ -165,7 +172,7 @@
           reply = `${matchedTitle} info: ${snippet || '(No date info found)'}`;
         }
         appendMessage('bot', reply);
-        ambiguousMatches = null; // reset state
+        ambiguousMatches = null;
         lastQuery = matchedTitle;
         activeContext = null;
         return;
@@ -175,21 +182,18 @@
       }
     }
 
-    // Check Bible intents first
-    const bibleIntent = matchBibleIntent(userText);
-    if (bibleIntent) {
-      // If intent expects followup context, set it
-      if (bibleIntent.expecting) {
-        activeContext = bibleIntent.id;
+    // Try matching intent from Bible or Detective
+    const intent = matchIntent(userText);
+    if (intent) {
+      if (intent.expecting) {
+        activeContext = intent.id;
       } else {
         activeContext = null;
       }
 
-      // Check if output is a wiki redirect
-      if (bibleIntent.output.startsWith("wiki:")) {
-        const topic = bibleIntent.output.slice(5);
+      if (intent.output.startsWith("wiki:")) {
+        const topic = intent.output.slice(5);
         appendMessage('bot', `Searching Wikipedia for "${topic}"...`);
-        // Perform wiki search + respond with first match
         const results = await fetchWikiSearch(topic);
         if (!results) {
           appendMessage('bot', `No Wikipedia results found for "${topic}".`);
@@ -206,12 +210,12 @@
           appendMessage('bot', `${title} info: ${snippet.replace(/<\/?[^>]+(>|$)/g, "")}... (No date info found)`);
         }
       } else {
-        appendMessage('bot', bibleIntent.output);
+        appendMessage('bot', intent.output);
       }
       return;
     }
 
-    // No ambiguous matches, no bible intent matched → normal Wikipedia search
+    // No intent matched → do Wikipedia search
     appendMessage('bot', 'Searching Wikipedia...');
     lastQuery = userText;
     activeContext = null;
