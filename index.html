@@ -129,39 +129,13 @@
   }
 
   // Extract topic by finding words after 'is', 'are', 'was', 'were', 'born', 'died', 'the', ignoring filler words
-  function extractSmartTopic(input) {
-    const lower = input.toLowerCase().replace(/[?.,!]/g, '');
-    const questionWords = ['what', 'who', 'when', 'where', 'how', 'why', 'born', 'died'];
-    const fillers = ['the', 'a', 'an', 'is', 'are', 'was', 'were', 'of', 'on', 'in', 'to', 'by', 'for', 'about'];
+ function extractSmartTopic(input) {
+  const lower = input.toLowerCase().replace(/[?.,!]/g, '');
+  const stopwords = ['what', 'who', 'when', 'where', 'how', 'why', 'born', 'died', 'is', 'are', 'was', 'were', 'the', 'a', 'an', 'of', 'on', 'in', 'to', 'by', 'for', 'about', 'do', 'does', 'did', 'explain', 'define', 'tell', 'me', 'it', 'that', 'you'];
+  const words = lower.split(' ').filter(word => !stopwords.includes(word));
+  return words.slice(0, 4).join(' ');
+}
 
-    let words = lower.split(' ');
-
-    // Find position of the first question or intent word (like "what", "born", etc)
-    let intentIndex = words.findIndex(w => questionWords.includes(w));
-    if (intentIndex === -1) intentIndex = 0;
-
-    // Look for a filler word or intent word after intentIndex to locate where topic likely starts
-    let topicStartIndex = words.findIndex((w, i) =>
-      (fillers.includes(w) || questionWords.includes(w)) && i > intentIndex
-    );
-
-    if (topicStartIndex !== -1) {
-      topicStartIndex += 1; // start topic after this filler/intent word
-    } else {
-      topicStartIndex = intentIndex + 1;
-    }
-
-    // Collect topic words up to 4, skipping filler words
-    const topicWords = [];
-    for (let i = topicStartIndex; i < words.length; i++) {
-      if (!fillers.includes(words[i])) {
-        topicWords.push(words[i]);
-      }
-      if (topicWords.length >= 4) break;
-    }
-
-    return topicWords.join(' ');
-  }
 
   async function fetchWikiWithIntent(input) {
     const intent = detectIntent(input);
