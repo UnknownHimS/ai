@@ -74,7 +74,7 @@
     <button onclick="sendMessage()">Send</button>
   </div><a href="main.html">DataWeb</a>
 
- <script>
+<script>
   const chat = document.getElementById('chat');
   const input = document.getElementById('userInput');
 
@@ -116,29 +116,64 @@
   }
 
   function detectIntent(input) {
-    const text = input.toLowerCase();
-    if (text.includes("when")) return "when";
-    if (text.includes("who")) return "who";
-    if (text.includes("where")) return "where";
-    if (text.includes("how")) return "how";
-    if (text.includes("why")) return "why";
-    return "what";
+    const lower = input.toLowerCase();
+    if (lower.includes("born")) return "born";
+    if (lower.includes("died")) return "died";
+    if (lower.includes("when")) return "when";
+    if (lower.includes("who")) return "who";
+    if (lower.includes("where")) return "where";
+    if (lower.includes("how")) return "how";
+    if (lower.includes("why")) return "why";
+    if (lower.includes("what")) return "what";
+    return "what"; // default fallback
   }
 
+  // Extract topic by finding words after 'is', 'are', 'was', 'were', 'born', 'died', 'the', ignoring filler words
   function extractSmartTopic(input) {
-    const original = input.trim().toLowerCase().replace(/[?.,!]/g, '');
-    const stopwords = ['what','is','are','was','were','who','do','does','did','explain','define','about','tell','me','the','a','an','of','it','that','on','in','to','from','by','you'];
-    const cleaned = original.split(' ').filter(word => !stopwords.includes(word));
-    return cleaned.slice(0, 4).join(' ');
+    const lower = input.toLowerCase().replace(/[?.,!]/g, '');
+    const questionWords = ['what', 'who', 'when', 'where', 'how', 'why', 'born', 'died'];
+    const fillers = ['the', 'a', 'an', 'is', 'are', 'was', 'were', 'of', 'on', 'in', 'to', 'by', 'for', 'about'];
+
+    let words = lower.split(' ');
+
+    // Find position of the first question or intent word (like "what", "born", etc)
+    let intentIndex = words.findIndex(w => questionWords.includes(w));
+    if (intentIndex === -1) intentIndex = 0;
+
+    // Look for a filler word or intent word after intentIndex to locate where topic likely starts
+    let topicStartIndex = words.findIndex((w, i) =>
+      (fillers.includes(w) || questionWords.includes(w)) && i > intentIndex
+    );
+
+    if (topicStartIndex !== -1) {
+      topicStartIndex += 1; // start topic after this filler/intent word
+    } else {
+      topicStartIndex = intentIndex + 1;
+    }
+
+    // Collect topic words up to 4, skipping filler words
+    const topicWords = [];
+    for (let i = topicStartIndex; i < words.length; i++) {
+      if (!fillers.includes(words[i])) {
+        topicWords.push(words[i]);
+      }
+      if (topicWords.length >= 4) break;
+    }
+
+    return topicWords.join(' ');
   }
 
   async function fetchWikiWithIntent(input) {
+    const intent = detectIntent(input);
     const topic = extractSmartTopic(input);
+
     if (!topic) return "I couldn't figure out what to search for.";
 
-    const encodedTopic = encodeURIComponent(topic);
-    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodedTopic}`;
+    // Combine intent and topic for smarter query, e.g. "what batman" or "born batman"
+    const query = `${intent} ${topic}`.trim();
 
+    const encodedQuery = encodeURIComponent(query);
+    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodedQuery}`;
 
     try {
       const res = await fetch(url);
@@ -151,7 +186,6 @@
       }
 
       const summary = data.extract || "No summary available.";
-      const intent = detectIntent(input);
 
       switch (intent) {
         case 'when': {
@@ -173,6 +207,11 @@
         case 'how': {
           const howMatch = summary.match(/by\s(.+?)\./i);
           return howMatch ? `It happens by ${howMatch[1]}.` : summary;
+        }
+        case 'born':
+        case 'died': {
+          const bornDiedMatch = summary.match(/(\d{4})/);
+          return bornDiedMatch ? `${intent.charAt(0).toUpperCase() + intent.slice(1)} in ${bornDiedMatch[0]}.` : summary;
         }
         default:
           return summary;
