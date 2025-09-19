@@ -3,38 +3,71 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Wikipedia Birth Date Clarifier Bot</title>
+<title>baby ai with Bible Q&A</title>
 <style>
   body { font-family: Arial, sans-serif; background: #111; color: #0ff; padding: 20px; }
   input, button { padding: 10px; font-size: 16px; }
   button { margin-left: 10px; background: #0ff; border: none; color: #000; cursor: pointer; }
   #chat { max-width: 700px; height: 60vh; overflow-y: auto; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #0ff; }
-  .user { color: #0f0; margin: 5px 0; }
-  .bot { color: #f0f; margin: 5px 0; }
+  .user { color: #0f0; margin: 5px 0; white-space: pre-wrap; }
+  .bot { color: #f0f; margin: 5px 0; white-space: pre-wrap; }
   a { color: #0ff; }
 </style>
 </head>
 <body>
 
-<h2>baby ai</h2>
+<h2>baby ai with Bible Q&A</h2>
 
 <div id="chat"></div>
 
 <div>
-  <input type="text" id="userInput" placeholder="Ask about a person or type a name..." />
+  <input type="text" id="userInput" placeholder="Ask about a person, Bible verse, or type a name..." />
   <button onclick="sendMessage()">Send</button>
 </div>
-  <div>
-    <a href="main.html">WebData</a>
-  </div>
 
 <script>
   const chat = document.getElementById('chat');
   const input = document.getElementById('userInput');
 
-  // State to hold possible ambiguous matches
+  // State for ambiguous wikipedia matches (for name clarifications)
   let ambiguousMatches = null;
   let lastQuery = "";
+
+  // State for Bible Q&A context tracking
+  let activeContext = null;
+
+  // Loaded Bible intents
+  let bibleIntents = [];
+
+  // Load bible.json from your GitHub raw URL (replace with your actual raw URL!)
+  const BIBLE_JSON_URL = 'https://raw.githubusercontent.com/yourusername/yourrepo/main/bible.json';
+
+  // For testing, I'll use a sample small bible.json inline instead since I can't fetch in this environment
+  // Replace this with fetch(BIBLE_JSON_URL) in your real app
+  async function loadBibleIntents() {
+    try {
+      // const res = await fetch(BIBLE_JSON_URL);
+      // bibleIntents = await res.json();
+
+      // Sample from your provided bible.json to demo here:
+      bibleIntents = [
+        { "id": "ask_bible_verse", "keywords": ["bible", "know"], "output": "Do you want me to share a Bible verse?", "expecting": ["yes", "no"] },
+        { "id": "bible_yes", "keywords": ["yes"], "output": "Alright, here’s a verse for you: 'Love your neighbor as yourself.' — Matthew 22:39.", "required_context": "ask_bible_verse" },
+        { "id": "bible_no", "keywords": ["no"], "output": "Okay, should we discuss another topic?", "required_context": "ask_bible_verse" },
+        { "id": "give_bible", "keywords": ["give", "bible"], "output": "You want me to give you a Bible verse? Here’s one: 'Trust in the Lord with all your heart.' — Proverbs 3:5." },
+        { "id": "chatgpt_wiki", "keywords": ["what", "chatgpt"], "output": "wiki:ChatGPT" },
+        { "id": "ai_wiki", "keywords": ["what", "artificial", "intelligence"], "output": "wiki:Artificial intelligence" },
+        { "id": "planet_wiki", "keywords": ["what", "planet", "mars"], "output": "wiki:Mars" }
+      ];
+
+      appendMessage('bot', 'Bible Q&A intents loaded.');
+    } catch (e) {
+      appendMessage('bot', 'Failed to load Bible intents.');
+      console.error(e);
+    }
+  }
+
+  loadBibleIntents();
 
   function appendMessage(sender, text) {
     const p = document.createElement('p');
@@ -44,7 +77,7 @@
     chat.scrollTop = chat.scrollHeight;
   }
 
-  // Extract date info from snippet parentheses
+  // Extract date info from snippet parentheses (Wikipedia snippet)
   function extractDateFromSnippet(snippet) {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = snippet;
@@ -54,7 +87,7 @@
     let match;
     while ((match = parenRegex.exec(cleanText)) !== null) {
       const content = match[1].trim();
-      // Ignore year ranges like 1990–1995
+      // Ignore pure year ranges like 1990–1995
       if (/^\d{4}[–-]\d{4}$/.test(content)) continue;
       if (content.match(/\d{4}/)) return content;
     }
@@ -64,7 +97,6 @@
   // Fetch search results from Wikipedia API
   async function fetchWikiSearch(topic) {
     const endpoint = `https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srsearch=${encodeURIComponent(topic)}`;
-
     try {
       const res = await fetch(endpoint);
       if (!res.ok) return null;
@@ -93,6 +125,25 @@
     }
   }
 
+  // Check if user input matches a Bible intent
+  function matchBibleIntent(input) {
+    const inputLower = input.toLowerCase();
+
+    // Filter intents where all keywords appear in input
+    for (const intent of bibleIntents) {
+      if (!intent.keywords) continue;
+      const allKeywordsPresent = intent.keywords.every(k => inputLower.includes(k.toLowerCase()));
+      if (allKeywordsPresent) {
+        // Check required context if any
+        if (intent.required_context && intent.required_context !== activeContext) {
+          continue; // context mismatch
+        }
+        return intent;
+      }
+    }
+    return null;
+  }
+
   async function sendMessage() {
     const userText = input.value.trim();
     if (!userText) return;
@@ -116,6 +167,7 @@
         appendMessage('bot', reply);
         ambiguousMatches = null; // reset state
         lastQuery = matchedTitle;
+        activeContext = null;
         return;
       } else {
         appendMessage('bot', `I couldn't find "${userText}" in the options. Please pick one of the following:\n${ambiguousMatches.join('\n')}`);
@@ -123,28 +175,62 @@
       }
     }
 
-    // No ambiguous state => perform new search
+    // Check Bible intents first
+    const bibleIntent = matchBibleIntent(userText);
+    if (bibleIntent) {
+      // If intent expects followup context, set it
+      if (bibleIntent.expecting) {
+        activeContext = bibleIntent.id;
+      } else {
+        activeContext = null;
+      }
+
+      // Check if output is a wiki redirect
+      if (bibleIntent.output.startsWith("wiki:")) {
+        const topic = bibleIntent.output.slice(5);
+        appendMessage('bot', `Searching Wikipedia for "${topic}"...`);
+        // Perform wiki search + respond with first match
+        const results = await fetchWikiSearch(topic);
+        if (!results) {
+          appendMessage('bot', `No Wikipedia results found for "${topic}".`);
+          return;
+        }
+        const single = results[0];
+        const snippet = single.snippet;
+        const title = single.title;
+        const dateInfo = extractDateFromSnippet(snippet);
+
+        if (dateInfo) {
+          appendMessage('bot', `${title} dates found: ${dateInfo}`);
+        } else {
+          appendMessage('bot', `${title} info: ${snippet.replace(/<\/?[^>]+(>|$)/g, "")}... (No date info found)`);
+        }
+      } else {
+        appendMessage('bot', bibleIntent.output);
+      }
+      return;
+    }
+
+    // No ambiguous matches, no bible intent matched → normal Wikipedia search
     appendMessage('bot', 'Searching Wikipedia...');
     lastQuery = userText;
+    activeContext = null;
 
-    // Search Wikipedia
     const results = await fetchWikiSearch(userText);
     if (!results) {
       appendMessage('bot', `No results found for "${userText}".`);
       return;
     }
 
-    // If multiple matches, ask for clarification if ambiguous
     if (results.length > 1) {
-      // Get list of titles for clarification
       const titles = results.slice(0, 5).map(r => r.title);
-      ambiguousMatches = titles; // save state
+      ambiguousMatches = titles;
 
       appendMessage('bot', `I found multiple matches for "${userText}":\n${titles.map((t, i) => `${i+1}. ${t}`).join('\n')}\nPlease type the exact name to clarify.`);
       return;
     }
 
-    // Single result: display info
+    // Single result
     const single = results[0];
     const snippet = single.snippet;
     const title = single.title;
