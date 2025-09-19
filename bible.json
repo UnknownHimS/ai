@@ -194,5 +194,102 @@
     "id": "list_commandments_yes",
     "keywords": ["yes", "please", "sure"],
     "output": "1. You shall have no other gods before me. 2. You shall not make idols. 3. You shall not misuse the name of the Lord your God. 4. Remember the Sabbath day. 5. Honor your father and mother. 6. You shall not murder. 7. You shall not commit adultery. 8. You shall not steal. 9. You shall not give false testimony against your neighbor. 10. You shall not covet your neighbor’s house, wife, servants, animals, or anything that belongs to your neighbor."
-  }
+  },
+
+  {
+  "id": "bible_verse_worry_6",
+  "keywords": ["worry", "peace", "calm"],
+  "output": "'Cast your burden on the Lord, and He will sustain you; He will never permit the righteous to be moved.' — Psalm 55:22."
+},
+{
+  "id": "bible_verse_worry_7",
+  "keywords": ["worry", "anxiety", "rest"],
+  "output": "'Come to me, all who labor and are heavy laden, and I will give you rest.' — Matthew 11:28."
+},
+{
+  "id": "bible_verse_faith_4",
+  "keywords": ["faith", "trust", "god", "believe"],
+  "output": "'Trust in the Lord with all your heart, and do not lean on your own understanding.' — Proverbs 3:5."
+},
+{
+  "id": "bible_verse_faith_5",
+  "keywords": ["faith", "hope", "trust"],
+  "output": "'Jesus said to her, “Did I not tell you that if you believed you would see the glory of God?”' — John 11:40."
+},
+{
+  "id": "bible_verse_love_4",
+  "keywords": ["love", "kindness", "patience"],
+  "output": "'Be completely humble and gentle; be patient, bearing with one another in love.' — Ephesians 4:2."
+},
+{
+  "id": "bible_verse_strength_4",
+  "keywords": ["strength", "help", "god"],
+  "output": "'God is our refuge and strength, an ever-present help in trouble.' — Psalm 46:1."
+},
+{
+  "id": "bible_verse_peace_3",
+  "keywords": ["peace", "heart", "mind"],
+  "output": "'Let the peace of Christ rule in your hearts.' — Colossians 3:15."
+},
+{
+  "id": "bible_verse_forgiveness_3",
+  "keywords": ["forgiveness", "grace", "mercy"],
+  "output": "'Be kind to one another, tenderhearted, forgiving one another, as God in Christ forgave you.' — Ephesians 4:32."
+},
+{
+  "id": "bible_verse_encouragement_3",
+  "keywords": ["encouragement", "hope", "strength"],
+  "output": "'Have I not commanded you? Be strong and courageous. Do not be frightened, and do not be dismayed, for the Lord your God is with you wherever you go.' — Joshua 1:9."
+},
+{
+  "id": "bible_verse_wisdom_1",
+  "keywords": ["wisdom", "guidance", "knowledge"],
+  "output": "'If any of you lacks wisdom, let him ask God, who gives generously to all without reproach.' — James 1:5."
+},
+{
+  "id": "bible_verse_wisdom_2",
+  "keywords": ["wisdom", "understanding", "knowledge"],
+  "output": "'The fear of the Lord is the beginning of knowledge; fools despise wisdom and instruction.' — Proverbs 1:7."
+},
+{
+  "id": "bible_verse_joy_1",
+  "keywords": ["joy", "rejoice", "happiness"],
+  "output": "'Rejoice in the Lord always; again I will say, rejoice.' — Philippians 4:4."
+},
+{
+  "id": "bible_verse_joy_2",
+  "keywords": ["joy", "strength", "lord"],
+  "output": "'The joy of the Lord is your strength.' — Nehemiah 8:10."
+},
+{
+  "id": "bible_verse_patience_1",
+  "keywords": ["patience", "endurance", "longsuffering"],
+  "output": "'Be patient, therefore, brothers, until the coming of the Lord.' — James 5:7."
+},
+{
+  "id": "bible_verse_patience_2",
+  "keywords": ["patience", "waiting", "hope"],
+  "output": "'With all humility and gentleness, with patience, bearing with one another in love.' — Ephesians 4:2."
+},
+{
+  "id": "bible_verse_gratitude_1",
+  "keywords": ["thankful", "gratitude", "praise"],
+  "output": "'Give thanks in all circumstances; for this is the will of God in Christ Jesus for you.' — 1 Thessalonians 5:18."
+},
+{
+  "id": "bible_verse_gratitude_2",
+  "keywords": ["praise", "thanksgiving", "joy"],
+  "output": "'Let them give thanks to the Lord for his unfailing love and his wonderful deeds for mankind.' — Psalm 107:8."
+},
+{
+  "id": "bible_verse_guidance_1",
+  "keywords": ["guidance", "direction", "path"],
+  "output": "'Your word is a lamp to my feet and a light to my path.' — Psalm 119:105."
+},
+{
+  "id": "bible_verse_guidance_2",
+  "keywords": ["guidance", "direction", "trust"],
+  "output": "'In all your ways acknowledge Him, and He will make straight your paths.' — Proverbs 3:6."
+}
+
 ]
