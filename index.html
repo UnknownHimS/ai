@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Chatbot - minibot</title>
+  <title>baby ai</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #121212; color: #0ff; }
     input { padding: 8px; width: 300px; border-radius: 4px; border: 1px solid #0ff; background: #222; color: #0ff; }
@@ -17,14 +17,13 @@
 </head>
 <body>
 
-  <h1>Chatbot - minibot</h1>
+  <h1>Baby ai</h1>
   <input type="text" id="searchInput" placeholder="Enter your question or topic" />
   <button onclick="searchWikipedia()">Search</button>
 
   <div id="results" class="result"></div>
 
 <script>
-  // List of filler words to ignore in topic extraction
   const stopwords = [
     'what', 'who', 'when', 'where', 'how', 'why', 'born', 'died',
     'is', 'are', 'was', 'were', 'the', 'a', 'an', 'of', 'on', 'in',
@@ -32,14 +31,12 @@
     'tell', 'me', 'it', 'that', 'you', 'please', 'show', 'give', 'information', 'is', 'good', 'about'
   ];
 
-  // Extract topic from user input by removing stopwords
   function extractTopic(input) {
     let words = input.toLowerCase().replace(/[?.,!]/g, '').split(' ');
     let filtered = words.filter(w => !stopwords.includes(w));
-    return filtered.slice(0, 5).join(' ');  // limit to first 5 words to keep it concise
+    return filtered.slice(0, 5).join(' ');
   }
 
-  // Simple intent detection based on input words
   function detectIntent(input) {
     const lower = input.toLowerCase();
     if (lower.includes('born') || (lower.includes('when') && lower.includes('born'))) return 'born';
@@ -51,28 +48,45 @@
     return 'default';
   }
 
-  // Filter summary text based on intent (very simple heuristics)
-  function filterSummaryByIntent(summary, intent) {
-    if (intent === 'born') {
-      // Try to extract birth date or phrase with "born"
-      const bornRegex = /born[^.,;]*[.,;]/i;
-      const match = summary.match(bornRegex);
-      if (match) return match[0];
-      return summary;  // fallback to whole summary
+  function formatDate(dateString) {
+    try {
+      const d = new Date(dateString);
+      if (isNaN(d)) return null;
+      return d.toDateString();
+    } catch {
+      return null;
     }
-    if (intent === 'died') {
-      // Extract death info similarly
-      const diedRegex = /died[^.,;]*[.,;]/i;
-      const match = summary.match(diedRegex);
-      if (match) return match[0];
-      return summary;
+  }
+
+  async function fetchWikidataBirthDeath(entityId) {
+    const url = `https://www.wikidata.org/wiki/Special:EntityData/${entityId}.json`;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const entity = data.entities[entityId];
+      const claims = entity.claims;
+
+      let birthDate = null;
+      let deathDate = null;
+
+      // P569 = date of birth
+      if (claims.P569 && claims.P569[0].mainsnak.datavalue) {
+        birthDate = claims.P569[0].mainsnak.datavalue.value.time;
+      }
+      // P570 = date of death
+      if (claims.P570 && claims.P570[0].mainsnak.datavalue) {
+        deathDate = claims.P570[0].mainsnak.datavalue.value.time;
+      }
+
+      return {
+        birthDate: birthDate ? formatDate(birthDate.replace('+', '')) : null,
+        deathDate: deathDate ? formatDate(deathDate.replace('+', '')) : null
+      };
+    } catch (e) {
+      console.error(e);
+      return null;
     }
-    if (intent === 'who') {
-      // Return first sentence (assumed to contain who they are)
-      return summary.split('. ')[0] + '.';
-    }
-    // For other intents or default, return the full summary
-    return summary;
   }
 
   async function searchWikipedia() {
@@ -115,14 +129,40 @@
       }
 
       const summaryData = await summaryResponse.json();
-
       const intent = detectIntent(rawQuery);
-      const filteredSummary = filterSummaryByIntent(summaryData.extract, intent);
+
+      // If intent is born or died, try Wikidata for exact dates
+      let extraInfo = '';
+      if (intent === 'born' || intent === 'died') {
+        if (summaryData.wikidata_item) {
+          const dates = await fetchWikidataBirthDeath(summaryData.wikidata_item);
+          if (dates) {
+            if (intent === 'born' && dates.birthDate) {
+              extraInfo = `<p><strong>Born:</strong> ${dates.birthDate}</p>`;
+            }
+            if (intent === 'died' && dates.deathDate) {
+              extraInfo = `<p><strong>Died:</strong> ${dates.deathDate}</p>`;
+            }
+          }
+        }
+      }
+
+      // For other intents or if no date found, just show summary (or filtered)
+      let displayText = summaryData.extract;
+      if ((intent === 'born' || intent === 'died') && !extraInfo) {
+        // fallback: try regex in summary
+        const regex = intent === 'born' ? /born[^.,;]*[.,;]/i : /died[^.,;]*[.,;]/i;
+        const match = summaryData.extract.match(regex);
+        if (match) displayText = match[0];
+      } else if (intent === 'who') {
+        displayText = summaryData.extract.split('. ')[0] + '.';
+      }
 
       resultsDiv.innerHTML = `
         <div class="result-item">
           <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(topTitle)}" target="_blank" rel="noopener">${summaryData.title}</a>
-          <p>${filteredSummary}</p>
+          <p>${displayText}</p>
+          ${extraInfo}
         </div>
       `;
 
