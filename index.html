@@ -3,307 +3,187 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sci-Fi AI Chatbot with Bible API</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet" />
+  <title>Bible AI</title>
   <style>
     body {
-      background: radial-gradient(circle at center, #000 30%, #111 100%);
-      color: #0ff;
-      font-family: 'Orbitron', sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    #chat {
-      width: 90%;
+      font-family: Arial, sans-serif;
+      margin: 2rem;
       max-width: 700px;
-      height: 70vh;
-      background: rgba(0, 0, 0, 0.8);
-      border: 2px solid #0ff;
-      padding: 10px;
+    }
+    label, select, input, button {
+      display: block;
+      margin: 0.5rem 0;
+      font-size: 1rem;
+      width: 100%;
+      max-width: 400px;
+    }
+    #result {
+      margin-top: 1rem;
+      border: 1px solid #ccc;
+      padding: 1rem;
+      background: #f9f9f9;
+      max-height: 400px;
       overflow-y: auto;
-      margin-bottom: 10px;
-      box-shadow: 0 0 20px #0ff;
-      border-radius: 10px;
-    }
-    #chat p {
-      margin: 5px 0;
-    }
-    .user {
-      color: #0f0;
-    }
-    .bot {
-      color: #f0f;
       white-space: pre-wrap;
-    }
-    #inputArea {
-      width: 90%;
-      max-width: 700px;
-      display: flex;
-    }
-    #inputArea input {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      background: #222;
-      color: #0ff;
-      font-family: 'Orbitron', sans-serif;
-    }
-    #inputArea button {
-      background: #0ff;
-      color: #000;
-      border: none;
-      padding: 10px 20px;
-      cursor: pointer;
-      font-family: 'Orbitron', sans-serif;
-    }
-    #inputArea button:hover {
-      background: #0cc;
-    }
-    a {
-      margin-top: 10px;
-      color: #0ff;
-      text-decoration: none;
-      font-family: 'Orbitron', sans-serif;
-    }
-    a:hover {
-      text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <h1>Please use proper spelling; this chatbot is still learning.</h1>
+  <h1>Bible AI</h1>
 
-  <div id="chat"></div>
-  <div id="inputArea">
-    <input type="text" id="userInput" placeholder="Type a message..." autocomplete="off" />
-    <button id="sendBtn">Send</button>
-  </div>
-  <a href="main.html">DataWeb</a>
+  <label for="translation">Select Translation:</label>
+  <select id="translation"></select>
+
+  <label for="query">Enter verse or chapter (e.g., John 3:16 or Genesis 1):</label>
+  <input type="text" id="query" placeholder="Book Chapter:Verse or Book Chapter" />
+
+  <button id="searchBtn">Search</button>
+
+  <div id="result"></div>
 
 <script>
-  (function() {
-    const chat = document.getElementById('chat');
-    const input = document.getElementById('userInput');
-    const sendBtn = document.getElementById('sendBtn');
+  const translationSelect = document.getElementById('translation');
+  const queryInput = document.getElementById('query');
+  const searchBtn = document.getElementById('searchBtn');
+  const resultDiv = document.getElementById('result');
 
-    // Bible API base URL
-    const bibleApiBase = 'https://bible.helloao.org/api';
+  const apiBase = 'https://bible.helloao.org/api';
 
-    // List of common Bible book names to check against user input (short names accepted)
-    // This is simplified; you can expand this list
-    const bibleBooks = [
-      { short: 'gen', full: 'Genesis' },
-      { short: 'exod', full: 'Exodus' },
-      { short: 'lev', full: 'Leviticus' },
-      { short: 'num', full: 'Numbers' },
-      { short: 'deut', full: 'Deuteronomy' },
-      { short: 'josh', full: 'Joshua' },
-      { short: 'judg', full: 'Judges' },
-      { short: 'ruth', full: 'Ruth' },
-      { short: '1sam', full: '1 Samuel' },
-      { short: '2sam', full: '2 Samuel' },
-      { short: '1kgs', full: '1 Kings' },
-      { short: '2kgs', full: '2 Kings' },
-      { short: '1chr', full: '1 Chronicles' },
-      { short: '2chr', full: '2 Chronicles' },
-      { short: 'ezra', full: 'Ezra' },
-      { short: 'neh', full: 'Nehemiah' },
-      { short: 'esth', full: 'Esther' },
-      { short: 'job', full: 'Job' },
-      { short: 'ps', full: 'Psalms' },
-      { short: 'prov', full: 'Proverbs' },
-      { short: 'eccl', full: 'Ecclesiastes' },
-      { short: 'song', full: 'Song of Solomon' },
-      { short: 'isa', full: 'Isaiah' },
-      { short: 'jer', full: 'Jeremiah' },
-      { short: 'lam', full: 'Lamentations' },
-      { short: 'ezek', full: 'Ezekiel' },
-      { short: 'dan', full: 'Daniel' },
-      { short: 'hos', full: 'Hosea' },
-      { short: 'joel', full: 'Joel' },
-      { short: 'amos', full: 'Amos' },
-      { short: 'obad', full: 'Obadiah' },
-      { short: 'jonah', full: 'Jonah' },
-      { short: 'mic', full: 'Micah' },
-      { short: 'nah', full: 'Nahum' },
-      { short: 'hab', full: 'Habakkuk' },
-      { short: 'zep', full: 'Zephaniah' },
-      { short: 'hag', full: 'Haggai' },
-      { short: 'zec', full: 'Zechariah' },
-      { short: 'mal', full: 'Malachi' },
-      { short: 'mat', full: 'Matthew' },
-      { short: 'mark', full: 'Mark' },
-      { short: 'luke', full: 'Luke' },
-      { short: 'john', full: 'John' },
-      { short: 'acts', full: 'Acts' },
-      { short: 'rom', full: 'Romans' },
-      { short: '1cor', full: '1 Corinthians' },
-      { short: '2cor', full: '2 Corinthians' },
-      { short: 'gal', full: 'Galatians' },
-      { short: 'eph', full: 'Ephesians' },
-      { short: 'phil', full: 'Philippians' },
-      { short: 'col', full: 'Colossians' },
-      { short: '1thess', full: '1 Thessalonians' },
-      { short: '2thess', full: '2 Thessalonians' },
-      { short: '1tim', full: '1 Timothy' },
-      { short: '2tim', full: '2 Timothy' },
-      { short: 'titus', full: 'Titus' },
-      { short: 'philem', full: 'Philemon' },
-      { short: 'heb', full: 'Hebrews' },
-      { short: 'jas', full: 'James' },
-      { short: '1pet', full: '1 Peter' },
-      { short: '2pet', full: '2 Peter' },
-      { short: '1john', full: '1 John' },
-      { short: '2john', full: '2 John' },
-      { short: '3john', full: '3 John' },
-      { short: 'jude', full: 'Jude' },
-      { short: 'rev', full: 'Revelation' }
-    ];
-
-
-    function appendMessage(sender, text) {
-      const p = document.createElement('p');
-      p.className = sender;
-      p.textContent = (sender === 'user' ? '🧑 You: ' : '🤖 ShabbyBot: ') + text;
-      chat.appendChild(p);
-      chat.scrollTop = chat.scrollHeight;
-    }
-
-    // Utility: find Bible book in user input
-    function findBibleBook(input) {
-      const lower = input.toLowerCase();
-      // Try to find a bible book short name in input
-      for (const book of bibleBooks) {
-        if (lower.includes(book)) {
-          return book;
-        }
+  // Load available translations into dropdown
+  async function loadTranslations() {
+    try {
+      const res = await fetch(`${apiBase}/available_translations.json`);
+      if (!res.ok) throw new Error('Failed to load translations');
+      const data = await res.json();
+      // data is object with keys as translation codes
+      for (const [code, info] of Object.entries(data)) {
+        const opt = document.createElement('option');
+        opt.value = code;
+        opt.textContent = `${info.name} (${code.toUpperCase()})`;
+        translationSelect.appendChild(opt);
       }
-      return null;
-    }
-
-    // Fetch chapters count for a book (needed to know how many chapters to check)
-    async function getBookChaptersCount(translation, book) {
-      try {
-        const res = await fetch(`${bibleApiBase}/${translation}/books.json`);
-        if (!res.ok) return 0;
-        const books = await res.json();
-        const found = books.find(b => b.short_name.toLowerCase() === book.toLowerCase());
-        return found ? found.chapters : 0;
-      } catch {
-        return 0;
+      // default select first
+      if (translationSelect.options.length > 0) {
+        translationSelect.selectedIndex = 0;
       }
+    } catch (err) {
+      resultDiv.textContent = 'Error loading translations: ' + err.message;
     }
+  }
 
-    // Fetch verses from Bible API matching some keyword/topic
-    // For demo, fetch first chapter of the book
-    async function fetchBibleVerses(translation, book) {
-      const chaptersCount = await getBookChaptersCount(translation, book);
-      if (chaptersCount === 0) return null;
-
-      try {
-        // For simplicity fetch chapter 1 of the book
-        const res = await fetch(`${bibleApiBase}/${translation}/${book}/1.json`);
-        if (!res.ok) return null;
-        const data = await res.json();
-        return data.verses.map(v => `${v.verse}. ${v.text}`).join('\n');
-      } catch {
-        return null;
-      }
-    }
-
-    // Wikipedia fetch fallback
-    async function fetchWikiSummary(topic) {
-      const encodedTopic = encodeURIComponent(topic);
-      const url = `https://en.wikipedia.org/w/rest.php/v1/page/${encodedTopic}`;
-
-      try {
-        const res = await fetch(url);
-        if (!res.ok) return `I couldn't find anything about "${topic}".`;
-        const data = await res.json();
-        const htmlSummary = data.lead?.sections?.[0]?.text || data.lead?.sections?.[0]?.content || "";
-        const summary = htmlSummary.replace(/<[^>]*>?/gm, '') || "No summary available.";
-        return summary;
-      } catch {
-        return "There was a problem fetching info from Wikipedia.";
-      }
-    }
-
-    // Extract possible Bible book name or keyword to trigger Bible API
-    function extractBibleTrigger(input) {
-      // Check for Bible-related keywords or book names
-      const bibleKeywords = ['bible', 'verse', 'chapter', 'god', 'jesus', 'christ', 'moses', 'psalm', 'proverb', 'genesis', 'exodus'];
-      const lower = input.toLowerCase();
-
-      // If any Bible keywords appear
-      for (const kw of bibleKeywords) {
-        if (lower.includes(kw)) return true;
-      }
-      // Also check for book name
-      if (findBibleBook(lower)) return true;
-
-      return false;
-    }
-
-    // Extract a book short name from input (for demo, just pick first matched)
-    function extractBibleBook(input) {
-      return findBibleBook(input.toLowerCase());
-    }
-
-    async function getResponse(text) {
-      text = text.toLowerCase().trim();
-      if (!text) return "Please type something.";
-
-      // Check if input triggers Bible API usage
-      if (extractBibleTrigger(text)) {
-        const book = extractBibleBook(text) || 'gen'; // Default to Genesis if no book found
-        const translation = 'esv'; // Example: English Standard Version
-
-        const verses = await fetchBibleVerses(translation, book);
-        if (verses) {
-          return `Here are some verses from ${book.toUpperCase()} (ESV, Chapter 1):\n\n${verses}`;
-        } else {
-          return "Sorry, I couldn't find Bible verses for that book.";
-        }
-      }
-
-      // Otherwise fallback to Wikipedia summary
-      return await fetchWikiSummary(text);
-    }
-
-    async function sendMessage() {
-      const text = input.value.trim();
-      if (!text) return;
-      appendMessage('user', text);
-      input.value = '';
-      sendBtn.disabled = true;
-
-      try {
-        const botReply = await getResponse(text);
-        appendMessage('bot', botReply);
-      } catch (err) {
-        appendMessage('bot', "Oops, something went wrong.");
-        console.error(err);
-      } finally {
-        sendBtn.disabled = false;
-        input.focus();
-      }
-    }
-
-    sendBtn.addEventListener('click', sendMessage);
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        sendMessage();
-      }
+  // Normalize book name to short_name used by API
+  async function getBooksMap(translation) {
+    const res = await fetch(`${apiBase}/${translation}/books.json`);
+    if (!res.ok) throw new Error('Failed to load books');
+    const books = await res.json(); // array of {name, short_name, chapters}
+    // create map: name lowercased to short_name
+    const map = {};
+    books.forEach(book => {
+      map[book.name.toLowerCase()] = book.short_name.toLowerCase();
     });
+    return map;
+  }
 
-  })();
+  // Parse user input, return {book, chapter, verse} or null if invalid
+  function parseQuery(input) {
+    // Examples to handle:
+    // "John 3:16"
+    // "Genesis 1"
+    // "1 Corinthians 13:4"
+
+    input = input.trim();
+
+    // Match something like "BookName Chapter:Verse" or "BookName Chapter"
+    // The book name can be multiple words including numbers
+
+    const regex = /^(.+?)\s+(\d+)(?::(\d+))?$/;
+    const match = input.match(regex);
+    if (!match) return null;
+
+    return {
+      bookName: match[1].toLowerCase(),
+      chapter: parseInt(match[2], 10),
+      verse: match[3] ? parseInt(match[3], 10) : null
+    };
+  }
+
+  // Fetch chapter data and display requested verse or whole chapter
+  async function fetchAndDisplay(translation, bookShort, chapter, verse = null) {
+    try {
+      resultDiv.textContent = 'Loading...';
+      const res = await fetch(`${apiBase}/${translation}/${bookShort}/${chapter}.json`);
+      if (!res.ok) throw new Error('Chapter not found');
+      const data = await res.json();
+      const verses = data.verses;
+
+      if (verse !== null) {
+        // Find specific verse
+        const v = verses.find(v => v.verse === verse);
+        if (v) {
+          resultDiv.textContent = `${data.book} ${chapter}:${verse} - ${v.text}`;
+        } else {
+          resultDiv.textContent = `Verse ${verse} not found in ${data.book} chapter ${chapter}.`;
+        }
+      } else {
+        // Display whole chapter
+        let text = `${data.book} Chapter ${chapter}\n\n`;
+        verses.forEach(v => {
+          text += `${v.verse}. ${v.text}\n`;
+        });
+        resultDiv.textContent = text;
+      }
+    } catch (err) {
+      resultDiv.textContent = 'Error fetching chapter: ' + err.message;
+    }
+  }
+
+  async function onSearch() {
+    const translation = translationSelect.value;
+    const query = queryInput.value.trim();
+    if (!query) {
+      resultDiv.textContent = 'Please enter a verse or chapter.';
+      return;
+    }
+
+    const parsed = parseQuery(query);
+    if (!parsed) {
+      resultDiv.textContent = 'Invalid input format. Use "Book Chapter:Verse" or "Book Chapter".';
+      return;
+    }
+
+    try {
+      // Get book short_name map
+      const booksMap = await getBooksMap(translation);
+
+      // Try exact match or fallback ignoring numbers in book name (like "1 corinthians" vs "1corinthians")
+      let bookShort = booksMap[parsed.bookName];
+      if (!bookShort) {
+        // Try remove spaces in book name and search again
+        const noSpace = parsed.bookName.replace(/\s/g, '');
+        bookShort = booksMap[noSpace];
+      }
+
+      if (!bookShort) {
+        resultDiv.textContent = `Book "${parsed.bookName}" not found in ${translation.toUpperCase()}.`;
+        return;
+      }
+
+      await fetchAndDisplay(translation, bookShort, parsed.chapter, parsed.verse);
+    } catch (err) {
+      resultDiv.textContent = 'Error: ' + err.message;
+    }
+  }
+
+  searchBtn.addEventListener('click', onSearch);
+  queryInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      onSearch();
+    }
+  });
+
+  // Load translations on page load
+  loadTranslations();
+
 </script>
-
 </body>
 </html>
