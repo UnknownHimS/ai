@@ -1,41 +1,196 @@
 [
-  { "__comment": "=== BIBLE VERSES & RELATED ===" },
   {
     "id": "ask_bible_verse",
-    "keywords": ["bible", "know"],
-    "output": "Do you want me to share a Bible verse?",
+    "keywords": ["bible", "verse", "share", "quote"],
+    "output": "Would you like me to share a Bible verse?",
     "expecting": ["yes", "no"]
   },
   {
     "id": "bible_yes",
-    "keywords": ["yes"],
+    "keywords": ["yes", "sure", "please", "ok"],
     "output": "Alright, here’s a verse for you: 'Love your neighbor as yourself.' — Matthew 22:39.",
     "required_context": "ask_bible_verse"
   },
   {
     "id": "bible_no",
-    "keywords": ["no"],
-    "output": "Okay, should we discuss another topic?",
+    "keywords": ["no", "not now", "maybe later"],
+    "output": "Okay, feel free to ask anytime if you want a Bible verse.",
     "required_context": "ask_bible_verse"
   },
+
   {
-    "id": "give_bible",
-    "keywords": ["give", "bible"],
-    "output": "You want me to give you a Bible verse? Here’s one: 'Trust in the Lord with all your heart.' — Proverbs 3:5."
+    "id": "bible_verse_worry_1",
+    "keywords": ["worry", "anxiety", "fear", "trouble"],
+    "output": "'Do not be anxious about anything, but in every situation, by prayer and petition, with thanksgiving, present your requests to God.' — Philippians 4:6."
   },
   {
-    "id": "chatgpt_wiki",
-    "keywords": ["what", "chatgpt"],
-    "output": "wiki:ChatGPT"
+    "id": "bible_verse_worry_2",
+    "keywords": ["worry", "anxiety", "fear", "peace"],
+    "output": "'Peace I leave with you; my peace I give you. I do not give to you as the world gives. Do not let your hearts be troubled and do not be afraid.' — John 14:27."
   },
   {
-    "id": "ai_wiki",
-    "keywords": ["what", "artificial", "intelligence"],
-    "output": "wiki:Artificial intelligence"
+    "id": "bible_verse_worry_3",
+    "keywords": ["worry", "fear", "trust", "faith"],
+    "output": "'Cast all your anxiety on Him because He cares for you.' — 1 Peter 5:7."
   },
   {
-    "id": "planet_wiki",
-    "keywords": ["what", "planet", "mars"],
-    "output": "wiki:Mars"
-  }
-]
+    "id": "bible_verse_worry_4",
+    "keywords": ["fear", "worry", "trust"],
+    "output": "'When I am afraid, I put my trust in you.' — Psalm 56:3."
+  },
+  {
+    "id": "bible_verse_worry_5",
+    "keywords": ["worry", "care", "help"],
+    "output": "'Cast your cares on the Lord and He will sustain you; He will never let the righteous be shaken.' — Psalm 55:22."
+  },
+
+  {
+    "id": "bible_verse_faith_1",
+    "keywords": ["faith", "trust", "believe"],
+    "output": "'For we live by faith, not by sight.' — 2 Corinthians 5:7."
+  },
+  {
+    "id": "bible_verse_faith_2",
+    "keywords": ["faith", "hope", "trust"],
+    "output": "'Now faith is confidence in what we hope for and assurance about what we do not see.' — Hebrews 11:1."
+  },
+  {
+    "id": "bible_verse_faith_3",
+    "keywords": ["faith", "strength", "god"],
+    "output": "'I can do all things through Christ who strengthens me.' — Philippians 4:13."
+  },
+
+  {
+    "id": "bible_verse_hope_1",
+    "keywords": ["hope", "future", "promise"],
+    "output": "'For I know the plans I have for you,' declares the Lord, 'plans to prosper you and not to harm you, plans to give you hope and a future.' — Jeremiah 29:11."
+  },
+  {
+    "id": "bible_verse_hope_2",
+    "keywords": ["hope", "joy", "peace"],
+    "output": "'May the God of hope fill you with all joy and peace as you trust in Him.' — Romans 15:13."
+  },
+
+  {
+    "id": "bible_verse_love_1",
+    "keywords": ["love", "neighbor", "commandment"],
+    "output": "'Love your neighbor as yourself.' — Matthew 22:39."
+  },
+  {
+    "id": "bible_verse_love_2",
+    "keywords": ["love", "patient", "kind"],
+    "output": "'Love is patient, love is kind. It does not envy, it does not boast, it is not proud.' — 1 Corinthians 13:4."
+  },
+  {
+    "id": "bible_verse_love_3",
+    "keywords": ["love", "god", "jesus"],
+    "output": "'For God so loved the world that He gave His one and only Son.' — John 3:16."
+  },
+
+  {
+    "id": "bible_verse_strength_1",
+    "keywords": ["strength", "help", "god"],
+    "output": "'The Lord is my strength and my shield; my heart trusts in Him.' — Psalm 28:7."
+  },
+  {
+    "id": "bible_verse_strength_2",
+    "keywords": ["strength", "joy", "lord"],
+    "output": "'The joy of the Lord is your strength.' — Nehemiah 8:10."
+  },
+  {
+    "id": "bible_verse_strength_3",
+    "keywords": ["strength", "courage", "god"],
+    "output": "'Be strong and courageous. Do not be afraid; do not be discouraged, for the Lord your God will be with you wherever you go.' — Joshua 1:9."
+  },
+
+  {
+    "id": "bible_verse_peace_1",
+    "keywords": ["peace", "heart", "calm"],
+    "output": "'You will keep in perfect peace those whose minds are steadfast.' — Isaiah 26:3."
+  },
+  {
+    "id": "bible_verse_peace_2",
+    "keywords": ["peace", "lord", "comfort"],
+    "output": "'The Lord gives strength to His people; the Lord blesses His people with peace.' — Psalm 29:11."
+  },
+
+  {
+    "id": "bible_verse_forgiveness_1",
+    "keywords": ["forgiveness", "sin", "mercy"],
+    "output": "'If we confess our sins, He is faithful and just to forgive us our sins.' — 1 John 1:9."
+  },
+  {
+    "id": "bible_verse_forgiveness_2",
+    "keywords": ["forgive", "love", "mercy"],
+    "output": "'Be kind and compassionate to one another, forgiving each other, just as in Christ God forgave you.' — Ephesians 4:32."
+  },
+
+  {
+    "id": "bible_verse_encouragement_1",
+    "keywords": ["encouragement", "hope", "faith"],
+    "output": "'Let us not become weary in doing good, for at the proper time we will reap a harvest if we do not give up.' — Galatians 6:9."
+  },
+  {
+    "id": "bible_verse_encouragement_2",
+    "keywords": ["encouragement", "strength", "trust"],
+    "output": "'Those who hope in the Lord will renew their strength.' — Isaiah 40:31."
+  },
+
+  {
+    "id": "bible_verse_psalm23_1",
+    "keywords": ["psalm 23", "shepherd", "comfort"],
+    "output": "'The Lord is my shepherd, I lack nothing.' — Psalm 23:1."
+  },
+  {
+    "id": "bible_verse_psalm23_2",
+    "keywords": ["psalm 23", "valley", "fear"],
+    "output": "'Even though I walk through the darkest valley, I will fear no evil.' — Psalm 23:4."
+  },
+
+  {
+    "id": "bible_verse_john316",
+    "keywords": ["john 3:16", "god's love"],
+    "output": "'For God so loved the world that He gave His only Son, that whoever believes in Him shall not perish but have eternal life.' — John 3:16."
+  },
+
+  {
+    "id": "bible_verse_proverbs31",
+    "keywords": ["proverbs 31", "woman", "strength"],
+    "output": "'She is clothed with strength and dignity; she can laugh at the days to come.' — Proverbs 31:25."
+  },
+
+  {
+    "id": "bible_verse_matthew5_5",
+    "keywords": ["beatitudes", "matthew 5", "meek"],
+    "output": "'Blessed are the meek, for they shall inherit the earth.' — Matthew 5:5."
+  },
+
+  {
+    "id": "bible_greeting_hello",
+    "keywords": ["hello", "hi", "hey"],
+    "output": "Hello! How can I assist you with Bible verses or info today?"
+  },
+
+  {
+    "id": "bible_farewell_goodbye",
+    "keywords": ["bye", "goodbye", "see you"],
+    "output": "Goodbye! May God bless you."
+  },
+
+  {
+    "id": "bible_prayer_1",
+    "keywords": ["pray", "prayer", "help"],
+    "output": "Let me pray for you: 'Lord, grant peace and strength to those who seek You.'"
+  },
+
+  {
+    "id": "bible_commandments",
+    "keywords": ["commandments", "ten commandments"],
+    "output": "The Ten Commandments were given to Moses on Mount Sinai. Would you like me to list them?",
+    "expecting": ["yes", "no"]
+  },
+
+  {
+    "id": "list_commandments_yes",
+    "keywords": ["yes", "please", "sure"],
+    "output": "1. You shall have no other gods before me. 2. You shall not make idols. 3. You shall not misuse the name of the Lord your God. 4. Remember the Sabbath day. 5. Honor your father and mother. 6. You shall not murder. 7. You shall not commit adultery. 8. You shall not steal. 9. You
