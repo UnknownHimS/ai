@@ -138,7 +138,7 @@
 
 
 async function fetchWikiWithIntent(input) {
-  // Use the full user input as the topic, but trim and capitalize it
+  // Use the full user input as the topic, capitalize first letters
   const topic = input.trim()
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -163,45 +163,6 @@ async function fetchWikiWithIntent(input) {
     return "There was a problem fetching info from Wikipedia.";
   }
 }
-
-
-
-      const summary = data.extract || "No summary available.";
-
-      switch (intent) {
-        case 'when': {
-          const match = summary.match(/\b(1[0-9]{3}|2[0-9]{3})\b/);
-          return match ? `It happened in ${match[0]}.` : summary;
-        }
-        case 'who': {
-          const whoMatch = summary.match(/^([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)/);
-          return whoMatch ? `It was ${whoMatch[1]}.` : summary;
-        }
-        case 'where': {
-          const whereMatch = summary.match(/in\s([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/);
-          return whereMatch ? `It happened in ${whereMatch[1]}.` : summary;
-        }
-        case 'why': {
-          const whyMatch = summary.match(/because\s(.+?)\./i);
-          return whyMatch ? `Because ${whyMatch[1]}.` : summary;
-        }
-        case 'how': {
-          const howMatch = summary.match(/by\s(.+?)\./i);
-          return howMatch ? `It happens by ${howMatch[1]}.` : summary;
-        }
-        case 'born':
-        case 'died': {
-          const bornDiedMatch = summary.match(/(\d{4})/);
-          return bornDiedMatch ? `${intent.charAt(0).toUpperCase() + intent.slice(1)} in ${bornDiedMatch[0]}.` : summary;
-        }
-        default:
-          return summary;
-      }
-    } catch (err) {
-      console.error(err);
-      return "There was a problem fetching info from Wikipedia.";
-    }
-  }
 
   async function getResponse(text) {
     text = text.toLowerCase();
