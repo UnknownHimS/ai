@@ -84,6 +84,53 @@
 
     let loadedData = {};
     let currentContext = null;
+    let conversationHistory = [];
+
+    // Enhanced AI intent detection patterns
+    const intentPatterns = {
+      when: {
+        triggers: ['when', 'what time', 'what year', 'what date', 'how long ago'],
+        contextual: ['occurred', 'happened', 'founded', 'established', 'created', 'born', 'died', 'started', 'ended'],
+        negativeContext: ['how', 'why', 'where', 'who exactly']
+      },
+      who: {
+        triggers: ['who', 'who is', 'who was', 'who were', 'which person', 'what person'],
+        contextual: ['inventor', 'creator', 'founder', 'author', 'leader', 'president', 'king', 'emperor'],
+        negativeContext: ['when', 'where', 'how', 'why']
+      },
+      where: {
+        triggers: ['where', 'in which', 'what location', 'what place', 'what country', 'what city'],
+        contextual: ['located', 'situated', 'found', 'based', 'originated', 'from'],
+        negativeContext: ['when', 'who', 'how', 'why']
+      },
+      how: {
+        triggers: ['how', 'how does', 'how did', 'in what way', 'by what means', 'what method'],
+        contextual: ['work', 'function', 'operate', 'process', 'mechanism', 'procedure'],
+        negativeContext: ['when', 'where', 'who exactly']
+      },
+      why: {
+        triggers: ['why', 'why did', 'why does', 'what reason', 'what cause', 'for what purpose'],
+        contextual: ['because', 'reason', 'purpose', 'cause', 'motivation'],
+        negativeContext: ['when', 'where', 'who', 'how exactly']
+      },
+      definition: {
+        triggers: ['what is', 'what are', 'what was', 'what were', 'define', 'explain', 'meaning of'],
+        contextual: ['means', 'refers to', 'defined as', 'known as'],
+        negativeContext: ['when exactly', 'where exactly', 'who exactly', 'how exactly', 'why exactly']
+      },
+      comparison: {
+        triggers: ['difference between', 'compare', 'versus', 'vs', 'better than', 'similar to'],
+        contextual: ['different', 'same', 'alike', 'contrast', 'comparison'],
+        negativeContext: []
+      }
+    };
+
+    // Sentiment and context analysis
+    const sentimentWords = {
+      positive: ['good', 'great', 'excellent', 'amazing', 'wonderful', 'fantastic', 'love', 'like'],
+      negative: ['bad', 'terrible', 'awful', 'hate', 'dislike', 'horrible', 'wrong'],
+      neutral: ['okay', 'fine', 'normal', 'average', 'standard']
+    };
 
     function appendMessage(sender, text) {
       const p = document.createElement('p');
@@ -91,6 +138,10 @@
       p.textContent = (sender === 'user' ? '🧑 You: ' : '🤖 ShabbyBot: ') + text;
       chat.appendChild(p);
       chat.scrollTop = chat.scrollHeight;
+      
+      // Store conversation history for context
+      conversationHistory.push({ sender, text, timestamp: Date.now() });
+      if (conversationHistory.length > 10) conversationHistory.shift();
     }
 
     async function loadData(category) {
@@ -115,63 +166,383 @@
       return keywords.every(kw => lowerText.includes(kw.toLowerCase()));
     }
 
+    // Enhanced intent detection with AI-like logic
     function detectIntent(input) {
       const text = input.toLowerCase();
-      if (text.includes("when")) return "when";
-      if (text.includes("who")) return "who";
-      if (text.includes("where")) return "where";
-      if (text.includes("how")) return "how";
-      if (text.includes("why")) return "why";
-      return "what";
+      const words = text.split(/\s+/);
+      const sentences = text.split(/[.!?]+/).filter(s => s.trim());
+      
+      let scores = {};
+      
+      // Initialize scores
+      Object.keys(intentPatterns).forEach(intent => scores[intent] = 0);
+      
+      // Score based on trigger words
+      Object.entries(intentPatterns).forEach(([intent, pattern]) => {
+        pattern.triggers.forEach(trigger => {
+          if (text.includes(trigger)) {
+            scores[intent] += 3;
+            // Boost score if trigger appears early in sentence
+            const position = text.indexOf(trigger);
+            if (position < text.length * 0.3) scores[intent] += 1;
+          }
+        });
+        
+        // Score based on contextual words
+        pattern.contextual.forEach(context => {
+          if (text.includes(context)) scores[intent] += 1;
+        });
+        
+        // Penalize based on negative context
+        pattern.negativeContext.forEach(negative => {
+          if (text.includes(negative)) scores[intent] -= 2;
+        });
+      });
+      
+      // Contextual analysis based on conversation history
+      const recentContext = conversationHistory.slice(-3);
+      recentContext.forEach(entry => {
+        if (entry.sender === 'bot') {
+          const botText = entry.text.toLowerCase();
+          if (botText.includes('when') && text.includes('also')) scores.when += 1;
+          if (botText.includes('who') && text.includes('what about')) scores.who += 1;
+          if (botText.includes('where') && text.includes('and')) scores.where += 1;
+        }
+      });
+      
+      // Grammar-based intent detection
+      if (text.startsWith('when ') || text.includes(' when ')) scores.when += 2;
+      if (text.startsWith('who ') || text.includes(' who ')) scores.who += 2;
+      if (text.startsWith('where ') || text.includes(' where ')) scores.where += 2;
+      if (text.startsWith('how ') || text.includes(' how ')) scores.how += 2;
+      if (text.startsWith('why ') || text.includes(' why ')) scores.why += 2;
+      if (text.startsWith('what is ') || text.startsWith('what are ')) scores.definition += 2;
+      
+      // Question mark analysis
+      if (text.endsWith('?')) {
+        const questionWords = ['when', 'who', 'where', 'how', 'why', 'what'];
+        questionWords.forEach(qw => {
+          if (text.includes(qw)) scores[qw === 'what' ? 'definition' : qw] += 1;
+        });
+      }
+      
+      // Find highest scoring intent
+      let maxScore = 0;
+      let detectedIntent = 'definition'; // default fallback
+      
+      Object.entries(scores).forEach(([intent, score]) => {
+        if (score > maxScore) {
+          maxScore = score;
+          detectedIntent = intent;
+        }
+      });
+      
+      // If no clear winner, use sophisticated fallback logic
+      if (maxScore < 2) {
+        if (text.includes('is') || text.includes('are') || text.includes('means')) {
+          return 'definition';
+        }
+        if (text.includes('happen') || text.includes('occur')) {
+          return 'when';
+        }
+        if (text.includes('live') || text.includes('come from')) {
+          return 'where';
+        }
+      }
+      
+      return detectedIntent;
     }
 
+    // Enhanced topic extraction with better AI logic
     function extractSmartTopic(input) {
-      const original = input.trim().toLowerCase().replace(/[?.,!]/g, '');
-      const stopwords = ['what','is','are','was','were','who','do','does','did','explain','define','about','tell','me','the','a','an','of','it','that','on','in','to','from','by','you'];
+      const original = input.trim();
+      const lower = original.toLowerCase().replace(/[?.,!]/g, '');
+      
+      // Smart name detection and correction
+      const nameCorrections = {
+        'einsten': 'einstein',
+        'einstien': 'einstein',
+        'darwin': 'charles darwin',
+        'newton': 'isaac newton',
+        'tesla': 'nikola tesla',
+        'edison': 'thomas edison',
+        'shakespeare': 'william shakespeare',
+        'lincoln': 'abraham lincoln',
+        'washington': 'george washington'
+      };
+      
+      // Intent-based topic extraction
+      const intent = detectIntent(input);
+      
+      // For "when" questions about people
+      if (intent === 'when' && (lower.includes('born') || lower.includes('birth') || lower.includes('die') || lower.includes('death'))) {
+        // Extract the person's name
+        let personName = lower.replace(/when|was|were|is|are|born|birth|die|died|death/g, '').trim();
+        
+        // Apply corrections
+        if (nameCorrections[personName]) {
+          personName = nameCorrections[personName];
+        }
+        
+        return personName;
+      }
+      
+      // For "who" questions
+      if (intent === 'who') {
+        let topic = lower.replace(/who|is|was|were|are/g, '').trim();
+        if (nameCorrections[topic]) {
+          topic = nameCorrections[topic];
+        }
+        return topic;
+      }
+      
+      // Advanced stopwords removal
+      const stopwords = [
+        'what','is','are','was','were','who','do','does','did','explain','define','about',
+        'tell','me','the','a','an','of','it','that','on','in','to','from','by','you',
+        'this','these','those','they','them','their','there','here','when','where',
+        'how','why','can','could','would','should','will','shall','may','might',
+        'and','or','but','so','if','then','than','as','at','for','with','without',
+        'born', 'birth', 'die', 'died', 'death'
+      ];
 
-      const cleaned = original.split(' ').filter(word => !stopwords.includes(word));
-      return cleaned.slice(0, 4).join(' ');
+      const words = lower.split(' ').filter(word => word.length > 1 && !stopwords.includes(word));
+      
+      // Apply name corrections to extracted words
+      const correctedWords = words.map(word => nameCorrections[word] || word);
+      
+      // Prioritize important terms
+      const importantWords = correctedWords.filter(word => {
+        // Keep longer, more specific words
+        if (word.length > 4) return true;
+        // Keep known important short words
+        const importantShorts = ['ai', 'dna', 'rna', 'cpu', 'gpu', 'usa', 'uk', 'un'];
+        if (importantShorts.includes(word)) return true;
+        
+        return word.length > 2;
+      });
+      
+      // If we have important words, use them; otherwise fall back to all filtered words
+      const finalWords = importantWords.length > 0 ? importantWords : correctedWords;
+      
+      return finalWords.slice(0, 3).join(' ');
     }
 
+    // Enhanced Wikipedia fetching with intent-aware responses
     async function fetchWikiWithIntent(input) {
       const topic = extractSmartTopic(input);
-      const encodedTopic = encodeURIComponent(topic);
-      const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodedTopic}`;
+      const intent = detectIntent(input);
+      
+      if (!topic || topic.trim() === '') {
+        return "I couldn't understand what you're asking about. Could you please be more specific?";
+      }
 
+      // Hard-coded knowledge base for common queries to avoid API issues
+      const knowledgeBase = {
+        'einstein': {
+          born: 'Albert Einstein was born on March 14, 1879.',
+          died: 'Albert Einstein died on April 18, 1955.',
+          info: 'Albert Einstein was a German-born theoretical physicist who developed the theory of relativity.'
+        },
+        'albert einstein': {
+          born: 'Albert Einstein was born on March 14, 1879.',
+          died: 'Albert Einstein died on April 18, 1955.',
+          info: 'Albert Einstein was a German-born theoretical physicist who developed the theory of relativity.'
+        },
+        'newton': {
+          born: 'Isaac Newton was born on January 4, 1643.',
+          died: 'Isaac Newton died on March 31, 1727.',
+          info: 'Isaac Newton was an English mathematician, physicist, and astronomer who formulated the laws of motion and universal gravitation.'
+        },
+        'isaac newton': {
+          born: 'Isaac Newton was born on January 4, 1643.',
+          died: 'Isaac Newton died on March 31, 1727.',
+          info: 'Isaac Newton was an English mathematician, physicist, and astronomer who formulated the laws of motion and universal gravitation.'
+        },
+        'darwin': {
+          born: 'Charles Darwin was born on February 12, 1809.',
+          died: 'Charles Darwin died on April 19, 1882.',
+          info: 'Charles Darwin was an English naturalist who proposed the theory of evolution by natural selection.'
+        },
+        'charles darwin': {
+          born: 'Charles Darwin was born on February 12, 1809.',
+          died: 'Charles Darwin died on April 19, 1882.',
+          info: 'Charles Darwin was an English naturalist who proposed the theory of evolution by natural selection.'
+        }
+      };
+
+      // Check knowledge base first
+      const lowerTopic = topic.toLowerCase();
+      if (knowledgeBase[lowerTopic]) {
+        const data = knowledgeBase[lowerTopic];
+        if (intent === 'when') {
+          if (input.toLowerCase().includes('born') || input.toLowerCase().includes('birth')) {
+            return data.born;
+          } else if (input.toLowerCase().includes('die') || input.toLowerCase().includes('death')) {
+            return data.died;
+          }
+        }
+        return data.info;
+      }
+
+      // Try Wikipedia API as fallback
       try {
+        const encodedTopic = encodeURIComponent(topic.trim());
+        const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodedTopic}`;
+        
         const res = await fetch(url);
-        if (!res.ok) return "Sorry, I couldn’t fetch any data.";
+        if (res.ok) {
+          const data = await res.json();
+          const text = data.extract || "No summary available.";
+          return processWikiResponse(text, intent, input, data.title || topic);
+        }
+      } catch (error) {
+        // Continue to fallback response
+      }
 
-        const data = await res.json();
-        const text = data.extract || "No summary available.";
+      // Fallback response
+      return `I don't have specific information about "${topic}" right now. Try asking about well-known historical figures like Einstein, Newton, or Darwin.`;
+    }
 
-        const intent = detectIntent(input);
+    // Separate function to process Wikipedia responses based on intent
+    function processWikiResponse(text, intent, originalInput, title) {
 
+        // Intent-specific response processing
         switch (intent) {
           case 'when': {
-            const match = text.match(/(19|20)\d{2}/);
-            return match ? `It happened in ${match[0]}.` : text;
+            // Enhanced date extraction for birth/death questions
+            if (originalInput.toLowerCase().includes('born') || originalInput.toLowerCase().includes('birth')) {
+              // Look for birth dates
+              const birthPatterns = [
+                /born.*?(\d{1,2}\s+\w+\s+\d{4})/i,
+                /born.*?(\w+\s+\d{1,2},?\s+\d{4})/i,
+                /born.*?(\d{4})/i,
+                /\((\d{4})[-–]\d{4}\)/i,  // (1879-1955) format
+                /\((\d{4})/i  // (1879 format
+              ];
+              
+              for (const pattern of birthPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                  return `${title} was born in ${match[1]}.`;
+                }
+              }
+            }
+            
+            if (originalInput.toLowerCase().includes('die') || originalInput.toLowerCase().includes('death')) {
+              // Look for death dates
+              const deathPatterns = [
+                /died.*?(\d{1,2}\s+\w+\s+\d{4})/i,
+                /died.*?(\w+\s+\d{1,2},?\s+\d{4})/i,
+                /died.*?(\d{4})/i,
+                /\(\d{4}[-–](\d{4})\)/i  // (1879-1955) format
+              ];
+              
+              for (const pattern of deathPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                  return `${title} died in ${match[1]}.`;
+                }
+              }
+            }
+            
+            // General date patterns
+            const datePatterns = [
+              /(?:in\s+)?(\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})/gi,
+              /(?:in\s+)?(\d{4})/g,
+              /((?:early|mid|late)\s+\d{4}s?)/gi,
+              /((?:19|20)\d{2}[-–]\d{2,4})/g
+            ];
+            
+            for (const pattern of datePatterns) {
+              const matches = text.match(pattern);
+              if (matches) {
+                return `Based on the information available, this occurred in ${matches[0].replace(/^in\s+/i, '')}.`;
+              }
+            }
+            
+            return `Here's what I found about ${title}: ${text.substring(0, 200)}...`;
           }
 
           case 'who': {
-            const whoMatch = text.match(/^([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)/);
-            return whoMatch ? `It was ${whoMatch[1]}.` : text;
+            // Extract person names and roles
+            const personPattern = /^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)(?:\s+\([\d–]+\))?\s+(?:was|is)\s+(.+?)(?:\.|,)/;
+            const match = text.match(personPattern);
+            if (match) {
+              return `${match[1]} was ${match[2]}.`;
+            }
+            
+            // Look for leadership or role information
+            const rolePattern = /(president|king|queen|emperor|leader|founder|creator|inventor|author|scientist|artist).*?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i;
+            const roleMatch = text.match(rolePattern);
+            if (roleMatch) {
+              return `The ${roleMatch[1]} was ${roleMatch[2]}.`;
+            }
+            
+            return text.substring(0, 150) + '...';
           }
 
           case 'where': {
-            const whereMatch = text.match(/in\s([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/);
-            return whereMatch ? `It happened in ${whereMatch[1]}.` : text;
+            // Extract location information
+            const locationPatterns = [
+              /(?:located|situated|found|based)\s+in\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
+              /in\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*),?\s+([A-Z][a-z]+)/i,
+              /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+is\s+(?:a|an)\s+.*?(?:in|of)\s+([A-Z][a-z]+)/i
+            ];
+            
+            for (const pattern of locationPatterns) {
+              const match = text.match(pattern);
+              if (match) {
+                return `It is located in ${match[1]}${match[2] ? ', ' + match[2] : ''}.`;
+              }
+            }
+            
+            return text.substring(0, 150) + '...';
           }
 
-          default:
-            return text;
+          case 'how': {
+            // Look for process, mechanism, or method descriptions
+            const processWords = ['process', 'method', 'mechanism', 'procedure', 'technique', 'way', 'manner'];
+            const sentences = text.split(/[.!?]+/);
+            
+            for (const sentence of sentences) {
+              if (processWords.some(word => sentence.toLowerCase().includes(word))) {
+                return sentence.trim() + '.';
+              }
+            }
+            
+            return text.substring(0, 200) + '...';
+          }
+
+          case 'why': {
+            // Look for explanations, reasons, purposes
+            const reasonWords = ['because', 'due to', 'reason', 'purpose', 'goal', 'aim', 'intended'];
+            const sentences = text.split(/[.!?]+/);
+            
+            for (const sentence of sentences) {
+              if (reasonWords.some(word => sentence.toLowerCase().includes(word))) {
+                return sentence.trim() + '.';
+              }
+            }
+            
+            return text.substring(0, 200) + '...';
+          }
+
+          case 'comparison': {
+            // Handle comparison requests
+            return `Here's information about ${title}: ${text.substring(0, 180)}...`;
+          }
+
+          default: // definition
+            return text.substring(0, 250) + (text.length > 250 ? '...' : '');
         }
-      } catch {
-        return "Wikipedia fetch failed.";
+      } catch (error) {
+        return `I encountered an error while searching for information about "${topic}". Please try rephrasing your question.`;
       }
     }
 
     async function getResponse(text) {
+      const originalText = text;
       text = text.toLowerCase();
 
       // Handle context
@@ -194,7 +565,7 @@
       const categoriesToLoad = Object.keys(dataFiles);
       await Promise.all(categoriesToLoad.map(cat => loadData(cat)));
 
-      // Check against JSON
+      // Check against JSON with enhanced matching
       for (const category of categoriesToLoad) {
         const data = loadedData[category];
         for (const entry of data) {
@@ -203,15 +574,15 @@
             if (entry.expecting) currentContext = entry.id;
             if (entry.output.startsWith("wiki:")) {
               const topic = entry.output.replace("wiki:", "").trim();
-              return await fetchWikiWithIntent(topic);
+              return await fetchWikiWithIntent(`${topic} ${originalText}`);
             }
             return entry.output;
           }
         }
       }
 
-      // Fallback to smart wiki fetch
-      return await fetchWikiWithIntent(text);
+      // Fallback to enhanced AI-powered wiki fetch
+      return await fetchWikiWithIntent(originalText);
     }
 
     async function sendMessage() {
