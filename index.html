@@ -39,7 +39,6 @@
   // Loaded intents
   let bibleIntents = [];
   let detectiveIntents = [];
-  let combinedIntents = [];
 
   // Replace with your actual raw URLs for the JSON files
   const BIBLE_JSON_URL = 'https://raw.githubusercontent.com/UnknownHimS/ai/main/bible.json';
@@ -69,11 +68,10 @@
     }
   }
 
-  // Load both intents and combine
+  // Load both intents
   async function loadIntents() {
     await loadBibleIntents();
     await loadDetectiveIntents();
-    combinedIntents = [...bibleIntents, ...detectiveIntents];
   }
 
   loadIntents();
@@ -134,15 +132,14 @@
     }
   }
 
-  // Match user input to any intent (Bible or Detective)
-  function matchIntent(input) {
+  // Match user input to any intent in given intent list
+  function matchIntent(input, intents) {
     const inputLower = input.toLowerCase();
 
-    for (const intent of combinedIntents) {
+    for (const intent of intents) {
       if (!intent.keywords) continue;
       const allKeywordsPresent = intent.keywords.every(k => inputLower.includes(k.toLowerCase()));
       if (allKeywordsPresent) {
-        // Check required context if any
         if (intent.required_context && intent.required_context !== activeContext) {
           continue;
         }
@@ -158,7 +155,6 @@
     appendMessage('user', userText);
     input.value = '';
 
-    // If waiting for ambiguous name clarification
     if (ambiguousMatches) {
       const matchedTitle = ambiguousMatches.find(title => title.toLowerCase() === userText.toLowerCase());
       if (matchedTitle) {
@@ -182,8 +178,8 @@
       }
     }
 
-    // Try matching intent from Bible or Detective
-    const intent = matchIntent(userText);
+    // FIRST try Bible intents
+    let intent = matchIntent(userText, bibleIntents);
     if (intent) {
       if (intent.expecting) {
         activeContext = intent.id;
@@ -215,7 +211,40 @@
       return;
     }
 
-    // No intent matched → do Wikipedia search
+    // THEN try Detective intents
+    intent = matchIntent(userText, detectiveIntents);
+    if (intent) {
+      if (intent.expecting) {
+        activeContext = intent.id;
+      } else {
+        activeContext = null;
+      }
+
+      if (intent.output.startsWith("wiki:")) {
+        const topic = intent.output.slice(5);
+        appendMessage('bot', `Searching Wikipedia for "${topic}"...`);
+        const results = await fetchWikiSearch(topic);
+        if (!results) {
+          appendMessage('bot', `No Wikipedia results found for "${topic}".`);
+          return;
+        }
+        const single = results[0];
+        const snippet = single.snippet;
+        const title = single.title;
+        const dateInfo = extractDateFromSnippet(snippet);
+
+        if (dateInfo) {
+          appendMessage('bot', `${title} dates found: ${dateInfo}`);
+        } else {
+          appendMessage('bot', `${title} info: ${snippet.replace(/<\/?[^>]+(>|$)/g, "")}... (No date info found)`);
+        }
+      } else {
+        appendMessage('bot', intent.output);
+      }
+      return;
+    }
+
+    // If no intent matched, fallback to Wikipedia search
     appendMessage('bot', 'Searching Wikipedia...');
     lastQuery = userText;
     activeContext = null;
