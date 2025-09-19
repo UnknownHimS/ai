@@ -1,156 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Wikipedia Search with Date Filtering</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 20px; background: #111; color: #0ff; }
-  input { padding: 8px; width: 300px; }
-  button { padding: 8px 12px; cursor: pointer; }
-  #chat {
-    width: 90%; max-width: 700px;
-    height: 70vh; background: rgba(0,0,0,0.8);
-    border: 2px solid #0ff; padding: 10px; overflow-y: auto; margin-bottom: 10px;
-    box-shadow: 0 0 20px #0ff; border-radius: 10px;
-    font-family: 'Orbitron', sans-serif;
-  }
-  #chat p { margin: 5px 0; }
-  .user { color: #0f0; }
-  .bot { color: #f0f; }
-  #inputArea { width: 90%; max-width: 700px; display: flex; }
-  #inputArea input {
-    flex: 1; padding: 10px; border: none; background: #222; color: #0ff;
-    font-family: 'Orbitron', sans-serif;
-  }
-  #inputArea button {
-    background: #0ff; color: #000; border: none; padding: 10px 20px;
-    font-family: 'Orbitron', sans-serif;
-  }
-  #inputArea button:hover { background: #0cc; }
-  a { color: #0ff; text-decoration: underline; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wikipedia Birth Date Extractor</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #111; color: #0ff; padding: 20px; }
+    input, button { padding: 10px; font-size: 16px; }
+    button { margin-left: 10px; background: #0ff; border: none; color: #000; cursor: pointer; }
+    #output { margin-top: 20px; font-size: 18px; }
+    a { color: #0ff; }
+  </style>
 </head>
 <body>
 
-<h1>Wikipedia Search Chatbot</h1>
+  <h2>Wikipedia Born Date Finder</h2>
+  <input type="text" id="userInput" placeholder="Type a name like Einstein..." />
+  <button onclick="fetchWiki()">Search</button>
 
-<div id="chat"></div>
-<div id="inputArea">
-  <input type="text" id="userInput" placeholder="Type a message..." />
-  <button onclick="sendMessage()">Send</button>
-</div>
+  <div id="output"></div>
 
-<script>
-  const chat = document.getElementById('chat');
-  const input = document.getElementById('userInput');
+  <script>
+    // Extracts the first valid parentheses content with date info from text
+    function extractDateFromText(text) {
+      const parenRegex = /\(([^)]+)\)/g;
+      let match;
+      while ((match = parenRegex.exec(text)) !== null) {
+        const content = match[1].trim();
+        // Ignore plain year ranges like 1990–1995 or 2001-2005
+        if (/^\d{4}[–-]\d{4}$/.test(content)) continue;
 
-  function appendMessage(sender, text) {
-    const p = document.createElement('p');
-    p.className = sender;
-    p.innerHTML = (sender === 'user' ? '🧑 You: ' : '🤖 ShabbyBot: ') + text;
-    chat.appendChild(p);
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  function detectIntent(input) {
-    const lower = input.toLowerCase();
-    if (lower.includes("born")) return "born";
-    if (lower.includes("died")) return "died";
-    if (lower.includes("when")) return "when";
-    return "other";
-  }
-
-  function extractTopic(input) {
-    const stopwords = ['what', 'who', 'when', 'where', 'how', 'why', 'born', 'died', 'is', 'are', 'was', 'were', 'the', 'a', 'an', 'of', 'on', 'in', 'to', 'by', 'for', 'about', 'do', 'does', 'did', 'explain', 'define', 'tell', 'me', 'it', 'that', 'you', 'good', 'like'];
-    let words = input.toLowerCase().split(/\s+/).filter(word => !stopwords.includes(word));
-    return words.join(' ').trim();
-  }
-
-  // Extract first valid parentheses content from snippet text ignoring year ranges like 1990-1995
-  function extractDateInfo(text) {
-    const parenRegex = /\(([^)]+)\)/g;
-    let match;
-    while ((match = parenRegex.exec(text)) !== null) {
-      const content = match[1].trim();
-
-      // Ignore plain year range like 1990–1995 or 1990-1995
-      if (/^\d{4}[–-]\d{4}$/.test(content)) continue;
-
-      // Return first valid parentheses content
-      return content;
-    }
-    return null;
-  }
-
-  async function fetchWikiSearch(topic) {
-    if (!topic) return null;
-    const endpoint = `https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srsearch=${encodeURIComponent(topic)}`;
-
-    try {
-      const res = await fetch(endpoint);
-      if (!res.ok) return null;
-
-      const data = await res.json();
-      if (!data.query || !data.query.search || data.query.search.length === 0) return null;
-
-      return data.query.search;
-    } catch (e) {
-      console.error(e);
+        // A basic date pattern: contains digits and months or years
+        if (/\d{4}/.test(content) || /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/i.test(content)) {
+          return content;
+        }
+      }
       return null;
     }
-  }
 
-  async function getResponse(userText) {
-    const intent = detectIntent(userText);
-    const topic = extractTopic(userText);
+    async function fetchWiki() {
+      const query = document.getElementById('userInput').value.trim();
+      const output = document.getElementById('output');
+      output.innerHTML = 'Searching...';
 
-    if (!topic) return "Please specify who or what you want to know about.";
+      if (!query) {
+        output.innerHTML = 'Please enter a topic or name.';
+        return;
+      }
 
-    const results = await fetchWikiSearch(topic);
+      try {
+        // 1. Search for the topic
+        const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srsearch=${encodeURIComponent(query)}`;
+        const searchRes = await fetch(searchUrl);
+        const searchData = await searchRes.json();
+        const firstResult = searchData?.query?.search?.[0];
+        if (!firstResult) {
+          output.innerHTML = `No results found for "${query}".`;
+          return;
+        }
 
-    if (!results) return `I couldn't find anything about "${topic}".`;
+        const title = firstResult.title;
 
-    // Get first result snippet and title
-    const firstResult = results[0];
-    const snippetHTML = firstResult.snippet;
-    const title = firstResult.title;
+        // 2. Fetch the full extract of the first result page
+        const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&format=json&origin=*&titles=${encodeURIComponent(title)}`;
+        const extractRes = await fetch(extractUrl);
+        const extractData = await extractRes.json();
 
-    // Clean snippet of HTML tags
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = snippetHTML;
-    const snippetText = tempDiv.textContent || tempDiv.innerText || "";
+        const pages = extractData.query.pages;
+        const pageId = Object.keys(pages)[0];
+        const extractText = pages[pageId]?.extract || "";
 
-    // Show full snippet first
-    let output = `${snippetText}... <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(title)}" target="_blank" rel="noopener">Read more on Wikipedia</a>`;
+        // Extract dates from the full extract text
+        const dateInfo = extractDateFromText(extractText);
 
-    // If user question contains born, try to extract birth date info from parentheses
-    if ((intent === "born" || (intent === "when" && userText.toLowerCase().includes("born")))) {
-      const dateInfo = extractDateInfo(snippetText);
-      if (dateInfo) {
-        output = `<strong>${title}</strong> was born: ${dateInfo}`;
+        if (dateInfo) {
+          output.innerHTML = `<strong>${title}</strong> dates found: <strong>${dateInfo}</strong><br>
+            <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(title)}" target="_blank">Read more on Wikipedia</a>`;
+        } else {
+          output.innerHTML = `<strong>${title}</strong><br>${extractText}...<br>
+            <em>(No date info found in extract)</em><br>
+            <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(title)}" target="_blank">Read more on Wikipedia</a>`;
+        }
+
+      } catch (error) {
+        console.error(error);
+        output.innerHTML = 'An error occurred while fetching data.';
       }
     }
 
-    return output;
-  }
-
-  async function sendMessage() {
-    const text = input.value.trim();
-    if (!text) return;
-    appendMessage('user', text);
-    input.value = '';
-    appendMessage('bot', 'Typing...');
-    const botReply = await getResponse(text);
-    const lastMessage = chat.querySelector('p.bot:last-child');
-    if (lastMessage) lastMessage.remove();
-    appendMessage('bot', botReply);
-  }
-
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') sendMessage();
-  });
-</script>
+    // Enter key triggers search
+    document.getElementById('userInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') fetchWiki();
+    });
+  </script>
 
 </body>
 </html>
