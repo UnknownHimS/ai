@@ -3,17 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>baby ai</title>
+  <title>baby ai - Combined Search</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 2rem; }
-    select, button { margin: 0.5rem 0; padding: 0.5rem; font-size: 1rem; }
-    #verses { margin-top: 1rem; }
+    select, button, input { margin: 0.5rem 0; padding: 0.5rem; font-size: 1rem; }
+    #verses, #search-results { margin-top: 1rem; }
     .verse { margin-bottom: 0.8rem; }
     .verse-number { font-weight: bold; margin-right: 0.5rem; }
+    .result-item { margin-bottom: 1rem; }
+    .result-title { font-weight: bold; font-size: 1.1rem; }
+    .result-source { font-size: 0.85rem; color: #555; margin-bottom: 0.3rem; }
+    hr { margin: 2rem 0; }
   </style>
 </head>
 <body>
   <h1>baby ai</h1>
+
+  <h2>Search Books (OpenLibrary) or Wikipedia</h2>
+  <input type="text" id="search-input" placeholder="Enter search term..." />
+  <button id="search-btn">Search</button>
+
+  <div id="search-results"></div>
+
+  <hr>
 
   <label for="translation">Choose Translation:</label><br/>
   <select id="translation"></select><br/>
@@ -31,18 +43,23 @@
   <script>
     const apiBase = 'https://bible.helloao.org/api';
 
+    // Elements
+    const searchInput = document.getElementById('search-input');
+    const searchBtn = document.getElementById('search-btn');
+    const searchResultsDiv = document.getElementById('search-results');
+
     const translationSelect = document.getElementById('translation');
     const bookSelect = document.getElementById('book');
     const chapterSelect = document.getElementById('chapter');
     const loadBtn = document.getElementById('load');
     const versesDiv = document.getElementById('verses');
 
-    // Fetch available translations and populate dropdown
+    // --- Bible API functions ---
+
     async function loadTranslations() {
       try {
         const res = await fetch(`${apiBase}/available_translations.json`);
         const data = await res.json();
-        // data is an object with keys as translation codes and values as info
         for (const [key, value] of Object.entries(data)) {
           const option = document.createElement('option');
           option.value = key;
@@ -54,7 +71,6 @@
       }
     }
 
-    // Fetch books for selected translation
     async function loadBooks(translation) {
       bookSelect.innerHTML = '';
       chapterSelect.innerHTML = '';
@@ -62,14 +78,12 @@
       try {
         const res = await fetch(`${apiBase}/${translation}/books.json`);
         const data = await res.json();
-        // data is an array of book objects [{name, short_name, chapters}]
         data.forEach(book => {
           const option = document.createElement('option');
           option.value = book.short_name;
           option.textContent = book.name;
           bookSelect.appendChild(option);
         });
-        // Auto load chapters for first book
         if (data.length > 0) {
           loadChapters(translation, data[0].short_name);
         }
@@ -78,17 +92,10 @@
       }
     }
 
-    // Load chapters for selected book
     async function loadChapters(translation, book) {
       chapterSelect.innerHTML = '';
       versesDiv.innerHTML = '';
       try {
-        const res = await fetch(`${apiBase}/${translation}/${book}/1.json`);
-        if (!res.ok) throw new Error('Chapter not found');
-        const data = await res.json();
-        // data.verses is an array, so length = chapter length, but API might not give chapter count
-        // So we can guess chapter count by trying next chapters until fail OR
-        // The books.json has chapters count per book, let's use that:
         const booksRes = await fetch(`${apiBase}/${translation}/books.json`);
         const books = await booksRes.json();
         const bookData = books.find(b => b.short_name === book);
@@ -105,7 +112,6 @@
       }
     }
 
-    // Load verses for selected translation, book, chapter
     async function loadVerses(translation, book, chapter) {
       versesDiv.innerHTML = 'Loading...';
       try {
@@ -124,7 +130,107 @@
       }
     }
 
-    // Event Listeners
+    // --- Combined Search: OpenLibrary first, fallback Wikipedia ---
+
+    async function searchOpenLibrary(query) {
+      try {
+        const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}`);
+        if (!res.ok) throw new Error('OpenLibrary request failed');
+        const data = await res.json();
+        if (data.numFound > 0) {
+          return data.docs.slice(0, 10).map(book => ({
+            title: book.title || 'No title',
+            author: (book.author_name && book.author_name.join(', ')) || 'Unknown author',
+            year: book.first_publish_year || 'N/A',
+            source: 'OpenLibrary'
+          }));
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    }
+
+    async function searchWikipedia(query) {
+      try {
+        // Wikipedia Opensearch API returns array: [searchterm, titles[], descriptions[], urls[]]
+        const url = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=10&namespace=0&format=json&origin=*`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Wikipedia request failed');
+        const data = await res.json();
+        const [_, titles, descriptions, urls] = data;
+        if (titles.length === 0) return null;
+
+        return titles.map((title, i) => ({
+          title,
+          description: descriptions[i] || '',
+          url: urls[i],
+          source: 'Wikipedia'
+        }));
+      } catch {
+        return null;
+      }
+    }
+
+    async function combinedSearch(query) {
+      searchResultsDiv.innerHTML = 'Searching...';
+      let results = await searchOpenLibrary(query);
+
+      if (results && results.length > 0) {
+        displayResults(results);
+      } else {
+        // fallback Wikipedia
+        results = await searchWikipedia(query);
+        if (results && results.length > 0) {
+          displayResults(results);
+        } else {
+          searchResultsDiv.textContent = 'No results found on OpenLibrary or Wikipedia.';
+        }
+      }
+    }
+
+    function displayResults(results) {
+      searchResultsDiv.innerHTML = '';
+      results.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'result-item';
+
+        if (item.source === 'OpenLibrary') {
+          div.innerHTML = `
+            <div class="result-source">Source: OpenLibrary</div>
+            <div class="result-title">${item.title}</div>
+            <div>Author(s): ${item.author}</div>
+            <div>First Published: ${item.year}</div>
+          `;
+        } else if (item.source === 'Wikipedia') {
+          div.innerHTML = `
+            <div class="result-source">Source: Wikipedia</div>
+            <div class="result-title"><a href="${item.url}" target="_blank" rel="noopener">${item.title}</a></div>
+            <div>${item.description}</div>
+          `;
+        }
+
+        searchResultsDiv.appendChild(div);
+      });
+    }
+
+    // --- Event Listeners ---
+
+    searchBtn.addEventListener('click', () => {
+      const q = searchInput.value.trim();
+      if (q) {
+        combinedSearch(q);
+      } else {
+        alert('Please enter a search term');
+      }
+    });
+
+    searchInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        searchBtn.click();
+      }
+    });
+
     translationSelect.addEventListener('change', e => {
       loadBooks(e.target.value);
     });
