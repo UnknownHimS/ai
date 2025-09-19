@@ -1,267 +1,751 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Bible AI Chatbot</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Detective AI - The Midnight Murder Mystery</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #f9f9f9;
-    color: #333;
-    max-width: 700px;
-    margin: 2rem auto;
-    padding: 1rem;
+  @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Nosifer&family=Cinzel:wght@400;600;700&display=swap');
+  
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
   }
-  h1 {
+
+  body {
+    background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+    color: #e0e0e0;
+    font-family: 'Cinzel', serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Animated fog/smoke effect */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+      radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(150, 150, 150, 0.08) 0%, transparent 50%);
+    animation: mysterFog 20s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  @keyframes mysterFog {
+    0%, 100% { opacity: 0.3; transform: translateX(0px) translateY(0px); }
+    33% { opacity: 0.6; transform: translateX(30px) translateY(-20px); }
+    66% { opacity: 0.4; transform: translateX(-20px) translateY(30px); }
+  }
+
+  /* Rain effect */
+  .rain {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="rain" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse"><line x1="5" y1="0" x2="3" y2="10" stroke="%23ffffff" stroke-width="0.2" opacity="0.3"/></pattern></defs><rect width="100%" height="100%" fill="url(%23rain)"/></svg>') repeat;
+    animation: rainfall 1s linear infinite;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.4;
+  }
+
+  @keyframes rainfall {
+    0% { transform: translateY(-100px); }
+    100% { transform: translateY(100px); }
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 30px 20px;
+    background: rgba(0, 0, 0, 0.7);
+    border-bottom: 3px solid #8B0000;
+    box-shadow: 0 5px 30px rgba(139, 0, 0, 0.3);
+  }
+
+  .header h1 {
+    font-family: 'Nosifer', cursive;
+    font-size: clamp(2rem, 5vw, 4rem);
+    color: #DC143C;
+    text-shadow: 0 0 20px #DC143C, 0 0 40px #8B0000;
+    margin-bottom: 10px;
+    animation: flicker 3s ease-in-out infinite alternate;
+  }
+
+  @keyframes flicker {
+    0%, 100% { 
+      text-shadow: 0 0 20px #DC143C, 0 0 40px #8B0000;
+      filter: brightness(1);
+    }
+    50% { 
+      text-shadow: 0 0 10px #DC143C, 0 0 20px #8B0000;
+      filter: brightness(0.8);
+    }
+  }
+
+  .header .subtitle {
+    font-size: 1.2rem;
+    color: #888;
+    font-weight: 400;
+    letter-spacing: 2px;
+    font-family: 'Cinzel', serif;
+  }
+
+  /* Game Container */
+  .game-container {
+    display: flex;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+  /* Crime Scene */
+  .crime-scene {
+    flex: 1;
+    min-width: 300px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #8B0000;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(139, 0, 0, 0.3);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .crime-scene::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(139, 0, 0, 0.1), transparent);
+    animation: sweepLight 8s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  @keyframes sweepLight {
+    0%, 100% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    50% { transform: translateX(50%) translateY(50%) rotate(45deg); }
+  }
+
+  .scene-title {
+    font-size: 1.5rem;
+    color: #DC143C;
+    margin-bottom: 15px;
+    text-align: center;
+    font-weight: 700;
+  }
+
+  .scene-image {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+    border: 2px solid #444;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scene-image::after {
+    content: '🕵️‍♂️💀🔍';
+    position: absolute;
+    animation: sceneAnimation 5s ease-in-out infinite;
+  }
+
+  @keyframes sceneAnimation {
+    0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.7; }
+    50% { transform: scale(1.1) rotate(2deg); opacity: 1; }
+  }
+
+  .evidence-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .evidence-item {
+    background: rgba(139, 0, 0, 0.2);
+    border: 1px solid #8B0000;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .evidence-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+  }
+
+  .evidence-item:hover::before {
+    left: 100%;
+  }
+
+  .evidence-item:hover {
+    background: rgba(139, 0, 0, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(139, 0, 0, 0.4);
+  }
+
+  .evidence-item.found {
+    background: rgba(0, 139, 0, 0.3);
+    border-color: #008B00;
+  }
+
+  .evidence-emoji {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  .evidence-name {
+    font-size: 0.8rem;
+    color: #ccc;
+  }
+
+  /* Chat Interface */
+  .detective-chat {
+    flex: 1;
+    min-width: 300px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #8B0000;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    height: 600px;
+    box-shadow: 0 10px 30px rgba(139, 0, 0, 0.3);
+  }
+
+  .chat-header {
+    background: linear-gradient(135deg, #8B0000, #DC143C);
+    color: white;
+    padding: 15px;
+    text-align: center;
+    font-weight: 700;
+    border-radius: 13px 13px 0 0;
+    font-size: 1.1rem;
+  }
+
+  .chat-messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  .chat-messages::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .chat-messages::-webkit-scrollbar-track {
+    background: rgba(139, 0, 0, 0.2);
+  }
+
+  .chat-messages::-webkit-scrollbar-thumb {
+    background: #8B0000;
+    border-radius: 10px;
+  }
+
+  .message {
+    margin: 15px 0;
+    padding: 12px 15px;
+    border-radius: 15px;
+    animation: messageSlide 0.5s ease-out;
+    position: relative;
+    overflow: hidden;
+  }
+
+  @keyframes messageSlide {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .user-message {
+    background: linear-gradient(135deg, rgba(0, 100, 0, 0.3), rgba(0, 150, 0, 0.1));
+    border-left: 4px solid #00AA00;
+    margin-left: 20px;
+    color: #90EE90;
+  }
+
+  .detective-message {
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.3), rgba(200, 50, 50, 0.1));
+    border-left: 4px solid #DC143C;
+    margin-right: 20px;
+    color: #FFB6C1;
+  }
+
+  .system-message {
+    background: linear-gradient(135deg, rgba(255, 165, 0, 0.2), rgba(255, 140, 0, 0.1));
+    border-left: 4px solid #FFA500;
+    text-align: center;
+    color: #FFD700;
+    font-style: italic;
+  }
+
+  .chat-input {
+    display: flex;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 0 0 13px 13px;
+    gap: 10px;
+  }
+
+  .chat-input input {
+    flex: 1;
+    padding: 12px 15px;
+    border: 2px solid #8B0000;
+    background: rgba(0, 0, 0, 0.7);
+    color: #e0e0e0;
+    border-radius: 25px;
+    font-family: 'Cinzel', serif;
+    outline: none;
+    transition: all 0.3s ease;
+  }
+
+  .chat-input input:focus {
+    border-color: #DC143C;
+    box-shadow: 0 0 15px rgba(220, 20, 60, 0.3);
+  }
+
+  .chat-input input::placeholder {
+    color: #666;
+  }
+
+  .chat-input button {
+    padding: 12px 20px;
+    border: none;
+    background: linear-gradient(135deg, #8B0000, #DC143C);
+    color: white;
+    border-radius: 25px;
+    cursor: pointer;
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .chat-input button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+    border-radius: 50%;
+  }
+
+  .chat-input button:hover::before {
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    border-radius: 0;
+  }
+
+  .chat-input button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(139, 0, 0, 0.4);
+  }
+
+  /* Status Panel */
+  .status-panel {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    border: 2px solid #8B0000;
+    border-radius: 15px;
+    padding: 20px;
+    margin-top: 20px;
+    box-shadow: 0 10px 30px rgba(139, 0, 0, 0.3);
+  }
+
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
     text-align: center;
   }
-  #chat {
-    border: 1px solid #ccc;
-    height: 400px;
-    overflow-y: auto;
-    padding: 1rem;
-    background: #fff;
-    margin-bottom: 1rem;
+
+  .status-item {
+    background: rgba(139, 0, 0, 0.2);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #8B0000;
   }
-  #chat p {
-    margin: 0.5rem 0;
+
+  .status-item h3 {
+    color: #DC143C;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
   }
-  .user {
-    color: blue;
+
+  .status-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #FFD700;
   }
-  .bot {
-    color: green;
-  }
-  #inputArea {
-    display: flex;
-    gap: 0.5rem;
-  }
-  #userInput {
-    flex: 1;
-    padding: 0.5rem;
-    font-size: 1rem;
-  }
-  #sendBtn {
-    padding: 0.5rem 1rem;
-    font-size: 1rem;
-  }
-  label {
-    display: block;
-    margin-top: 1rem;
-  }
-  select {
+
+  .progress-bar {
     width: 100%;
-    padding: 0.5rem;
-    font-size: 1rem;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+    margin-top: 10px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #8B0000, #DC143C);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    position: relative;
+  }
+
+  .progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: progressShine 2s ease-in-out infinite;
+  }
+
+  @keyframes progressShine {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .game-container {
+      flex-direction: column;
+    }
+    
+    .detective-chat {
+      height: 400px;
+    }
+    
+    .header h1 {
+      font-size: 2rem;
+    }
+    
+    .chat-input {
+      flex-direction: column;
+    }
+    
+    .chat-input input,
+    .chat-input button {
+      border-radius: 15px;
+    }
+  }
+
+  /* Special Effects */
+  .lightning {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0;
+  }
+
+  .lightning.flash {
+    animation: lightningFlash 0.2s ease-in-out;
+  }
+
+  @keyframes lightningFlash {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 0.3; }
+  }
+
+  .typing-indicator {
+    display: inline-block;
+  }
+
+  .typing-indicator::after {
+    content: '...';
+    animation: typing 1.5s ease-in-out infinite;
+  }
+
+  @keyframes typing {
+    0%, 60%, 100% { content: '...'; }
+    20% { content: '.'; }
+    40% { content: '..'; }
   }
 </style>
 </head>
 <body>
+  <div class="rain"></div>
+  <div class="lightning" id="lightning"></div>
+  
+  <div class="header">
+    <h1>🕵️ DETECTIVE AI 🔍</h1>
+    <p class="subtitle">THE MIDNIGHT MURDER MYSTERY</p>
+  </div>
 
-<h1>Bible AI Chatbot</h1>
+  <div class="game-container">
+    <!-- Crime Scene -->
+    <div class="crime-scene">
+      <h2 class="scene-title">🏚️ CRIME SCENE INVESTIGATION</h2>
+      <div class="scene-image" id="crimeScene"></div>
+      
+      <h3 style="color: #DC143C; margin-bottom: 10px;">Evidence to Collect:</h3>
+      <div class="evidence-grid" id="evidenceGrid"></div>
+      
+      <div style="margin-top: 20px; padding: 15px; background: rgba(139, 0, 0, 0.2); border-radius: 10px; border: 1px solid #8B0000;">
+        <h4 style="color: #FFD700; margin-bottom: 10px;">🔍 Current Scene:</h4>
+        <p id="sceneDescription">A dark Victorian mansion on a stormy night. Thunder crashes as you examine the study where the victim was found...</p>
+      </div>
+    </div>
 
-<label for="translationSelect">Choose Translation:</label>
-<select id="translationSelect"></select>
+    <!-- Detective Chat -->
+    <div class="detective-chat">
+      <div class="chat-header">
+        🎩 Detective Holmes AI - Your Investigation Partner
+      </div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="chat-input">
+        <input type="text" id="userInput" placeholder="Ask about evidence, make accusations, or investigate clues..." />
+        <button id="sendBtn">🔍 Investigate</button>
+      </div>
+    </div>
+  </div>
 
-<label for="bookSelect">Choose Book:</label>
-<select id="bookSelect"></select>
-
-<label for="chapterSelect">Choose Chapter:</label>
-<select id="chapterSelect"></select>
-
-<div id="chat"></div>
-
-<div id="inputArea">
-  <input type="text" id="userInput" placeholder="Ask about Bible verses, people, or topics..." autocomplete="off" />
-  <button id="sendBtn">Send</button>
-</div>
+  <!-- Status Panel -->
+  <div class="status-panel">
+    <div class="status-grid">
+      <div class="status-item">
+        <h3>🕵️ Investigation Progress</h3>
+        <div class="status-value" id="progressPercent">0%</div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+      </div>
+      <div class="status-item">
+        <h3>🔍 Evidence Found</h3>
+        <div class="status-value" id="evidenceCount">0/8</div>
+      </div>
+      <div class="status-item">
+        <h3>🎯 Suspicion Level</h3>
+        <div class="status-value" id="suspicionLevel">Low</div>
+      </div>
+      <div class="status-item">
+        <h3>⚡ Case Status</h3>
+        <div class="status-value" id="caseStatus">Active</div>
+      </div>
+    </div>
+  </div>
 
 <script>
-(async function() {
-  const apiBase = 'https://bible.helloao.org/api';
+class DetectiveMysteryGame {
+  constructor() {
+    this.evidence = {
+      'bloody_knife': { emoji: '🔪', name: 'Bloody Knife', found: false, clue: 'A kitchen knife with fresh blood. The killer was in a hurry and left it behind.' },
+      'letter': { emoji: '📜', name: 'Threatening Letter', found: false, clue: 'A letter demanding money, signed "Your worst nightmare". The handwriting is shaky, suggesting fear or anger.' },
+      'fingerprint': { emoji: '👆', name: 'Fingerprint', found: false, clue: 'A clear fingerprint on the window. Someone tried to break in... or break out.' },
+      'watch': { emoji: '⌚', name: 'Gold Watch', found: false, clue: 'An expensive watch with the initials "R.B." The time stopped at 11:47 PM.' },
+      'glass': { emoji: '🥃', name: 'Wine Glass', found: false, clue: 'Two glasses, but only one has lipstick marks. Someone unexpected joined the victim.' },
+      'shoes': { emoji: '👠', name: 'Muddy Footprints', found: false, clue: 'Size 7 high heel prints leading from the garden to the study. The killer came from outside.' },
+      'phone': { emoji: '📱', name: 'Cell Phone', found: false, clue: 'The victim\'s phone shows a call at 11:30 PM. The last text: "I know what you did."' },
+      'key': { emoji: '🗝️', name: 'Mysterious Key', found: false, clue: 'An old brass key that doesn\'t fit any lock in the house. What was the killer trying to access?' }
+    };
 
-  const translationSelect = document.getElementById('translationSelect');
-  const bookSelect = document.getElementById('bookSelect');
-  const chapterSelect = document.getElementById('chapterSelect');
-  const chat = document.getElementById('chat');
-  const userInput = document.getElementById('userInput');
-  const sendBtn = document.getElementById('sendBtn');
+    this.suspects = {
+      'wife': { name: 'Margaret Blackwood', motive: 'Inheritance money', alibi: 'Claims she was in bed', suspicion: 3 },
+      'business_partner': { name: 'Robert Sterling', motive: 'Business dispute', alibi: 'At a bar until midnight', suspicion: 4 },
+      'secretary': { name: 'Elena Rodriguez', motive: 'Workplace harassment', alibi: 'Working late at office', suspicion: 2 },
+      'brother': { name: 'James Blackwood', motive: 'Family fortune', alibi: 'Playing poker with friends', suspicion: 3 }
+    };
 
-  let booksData = [];
-  let currentTranslation = null;
+    this.gameState = {
+      evidenceFound: 0,
+      progressPercent: 0,
+      suspicionLevel: 'Low',
+      caseStatus: 'Active',
+      currentScene: 'study',
+      questionsAsked: 0,
+      solved: false
+    };
 
-  // Append message to chat
-  function appendMessage(sender, text) {
-    const p = document.createElement('p');
-    p.className = sender;
-    p.textContent = (sender === 'user' ? 'You: ' : 'BibleAI: ') + text;
-    chat.appendChild(p);
-    chat.scrollTop = chat.scrollHeight;
+    this.mysteryFacts = [
+      "The victim, Charles Blackwood, was a wealthy businessman with many enemies.",
+      "He was found dead in his study at 11:50 PM during a violent thunderstorm.",
+      "The cause of death was a single stab wound to the chest.",
+      "All doors were locked from inside, but a window was found slightly open.",
+      "The victim had recently changed his will, cutting off several family members.",
+      "There were signs of a struggle, but nothing was stolen.",
+      "The victim had received several threatening messages in recent weeks.",
+      "Security cameras were mysteriously turned off between 11:30-12:00 PM."
+    ];
+
+    this.init();
   }
 
-  // Load translations
-  async function loadTranslations() {
-    try {
-      const res = await fetch(`${apiBase}/available_translations.json`);
-      const data = await res.json();
-      for (const [code, info] of Object.entries(data)) {
-        const opt = document.createElement('option');
-        opt.value = code;
-        opt.textContent = `${info.name} (${code.toUpperCase()})`;
-        translationSelect.appendChild(opt);
+  init() {
+    this.setupElements();
+    this.renderEvidence();
+    this.showWelcomeMessage();
+    this.updateStatus();
+    
+    // Lightning effect every 10-30 seconds
+    setInterval(() => {
+      if (Math.random() < 0.3) {
+        this.triggerLightning();
       }
-      currentTranslation = translationSelect.value = 'kjv'; // default to KJV if exists
-      loadBooks(currentTranslation);
-    } catch(e) {
-      appendMessage('bot', 'Failed to load translations.');
-    }
+    }, Math.random() * 20000 + 10000);
   }
 
-  // Load books for selected translation
-  async function loadBooks(translation) {
-    bookSelect.innerHTML = '';
-    chapterSelect.innerHTML = '';
-    try {
-      const res = await fetch(`${apiBase}/${translation}/books.json`);
-      booksData = await res.json();
-      booksData.forEach(book => {
-        const opt = document.createElement('option');
-        opt.value = book.short_name;
-        opt.textContent = book.name;
-        bookSelect.appendChild(opt);
-      });
-      loadChapters(translation, booksData[0].short_name);
-    } catch(e) {
-      appendMessage('bot', 'Failed to load books.');
-    }
+  setupElements() {
+    this.chatMessages = document.getElementById('chatMessages');
+    this.userInput = document.getElementById('userInput');
+    this.sendBtn = document.getElementById('sendBtn');
+    this.evidenceGrid = document.getElementById('evidenceGrid');
+    
+    this.sendBtn.addEventListener('click', () => this.handleUserInput());
+    this.userInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') this.handleUserInput();
+    });
   }
 
-  // Load chapters for book
-  function loadChapters(translation, bookShortName) {
-    chapterSelect.innerHTML = '';
-    const book = booksData.find(b => b.short_name === bookShortName);
-    if (!book) return;
-    for (let i = 1; i <= book.chapters; i++) {
-      const opt = document.createElement('option');
-      opt.value = i;
-      opt.textContent = i;
-      chapterSelect.appendChild(opt);
-    }
+  renderEvidence() {
+    this.evidenceGrid.innerHTML = '';
+    Object.keys(this.evidence).forEach(key => {
+      const item = this.evidence[key];
+      const div = document.createElement('div');
+      div.className = `evidence-item ${item.found ? 'found' : ''}`;
+      div.innerHTML = `
+        <span class="evidence-emoji">${item.emoji}</span>
+        <span class="evidence-name">${item.name}</span>
+      `;
+      div.addEventListener('click', () => this.examineEvidence(key));
+      this.evidenceGrid.appendChild(div);
+    });
   }
 
-  // Load verses from API for a chapter
-  async function loadVerses(translation, book, chapter) {
-    try {
-      const res = await fetch(`${apiBase}/${translation}/${book}/${chapter}.json`);
-      if (!res.ok) throw new Error('Chapter not found');
-      const data = await res.json();
-      return data.verses; // array of verses {verse, text}
-    } catch (e) {
-      return null;
-    }
-  }
-
-  // Simple NLP: Extract main keyword/topic (remove stopwords and common question words)
-  function extractKeywords(text) {
-    const stopwords = ['who','what','when','where','why','how','is','are','was','were','the','a','an','of','on','in','to','by','for','about','do','does','did','tell','me','please','give','show','say','verse','verses'];
-    return text
-      .toLowerCase()
-      .replace(/[^\w\s]/g, '')
-      .split(' ')
-      .filter(word => word && !stopwords.includes(word))
-      .slice(0, 3)
-      .join(' ');
-  }
-
-  // Detect if input is asking for verse, info about a person, or other intent
-  function detectIntent(text) {
-    const lower = text.toLowerCase();
-    if (/verse|chapter|book/.test(lower)) return 'verse';
-    if (/who|when|where|why|how/.test(lower)) return 'info';
-    return 'verse'; // default to verse search
-  }
-
-  // Search all books and chapters for verses containing the keyword (limiting chapters searched for demo)
-  async function searchVerses(keyword) {
-    appendMessage('bot', `Searching for verses containing "${keyword}"... This may take a few seconds.`);
-    const versesFound = [];
-
-    // For performance, limit to first 5 books and first 3 chapters each (demo only)
-    const booksToSearch = booksData.slice(0, 5);
-
-    for (const book of booksToSearch) {
-      const chaptersToSearch = Math.min(book.chapters, 3);
-      for (let ch = 1; ch <= chaptersToSearch; ch++) {
-        const verses = await loadVerses(currentTranslation, book.short_name, ch);
-        if (!verses) continue;
-        for (const verse of verses) {
-          if (verse.text.toLowerCase().includes(keyword.toLowerCase())) {
-            versesFound.push(`${book.name} ${ch}:${verse.verse} - ${verse.text}`);
-            if (versesFound.length >= 5) break; // limit number of results
-          }
-        }
-        if (versesFound.length >= 5) break;
+  examineEvidence(evidenceKey) {
+    const item = this.evidence[evidenceKey];
+    if (!item.found) {
+      item.found = true;
+      this.gameState.evidenceFound++;
+      this.gameState.progressPercent = Math.round((this.gameState.evidenceFound / 8) * 100);
+      
+      this.addMessage('system', `🎉 Evidence Found: ${item.name}!`);
+      this.addMessage('detective', `Interesting! ${item.clue} This could be significant to our case.`);
+      
+      this.renderEvidence();
+      this.updateStatus();
+      this.triggerLightning();
+      
+      // Check if case can be solved
+      if (this.gameState.evidenceFound >= 6) {
+        this.gameState.suspicionLevel = 'High';
+        this.addMessage('detective', `🕵️ With this much evidence, I think we're close to solving this case! Try making an accusation with "I accuse [suspect name]".`);
       }
-      if (versesFound.length >= 5) break;
-    }
-
-    return versesFound.length > 0 ? versesFound.join('\n\n') : `No verses found with "${keyword}".`;
-  }
-
-  // Main respond function
-  async function getResponse(inputText) {
-    appendMessage('user', inputText);
-    const intent = detectIntent(inputText);
-    const keyword = extractKeywords(inputText);
-
-    if (!keyword) return 'Please specify a topic or word to search for.';
-
-    if (intent === 'verse') {
-      // Search verses for the keyword
-      const result = await searchVerses(keyword);
-      return result;
-    } else if (intent === 'info') {
-      // For now, just do a simple fallback: search verses and prepend 'Info about keyword'
-      const verses = await searchVerses(keyword);
-      return `Info about "${keyword}":\n\n${verses}`;
     } else {
-      return "I didn't understand your request. Please ask about Bible verses or info.";
+      this.addMessage('detective', `You've already examined the ${item.name}. ${item.clue}`);
     }
   }
 
-  // Event handlers
-  translationSelect.addEventListener('change', e => {
-    currentTranslation = e.target.value;
-    loadBooks(currentTranslation);
-  });
+  handleUserInput() {
+    const input = this.userInput.value.trim();
+    if (!input) return;
 
-  bookSelect.addEventListener('change', e => {
-    loadChapters(currentTranslation, e.target.value);
-  });
+    this.addMessage('user', input);
+    this.userInput.value = '';
+    this.gameState.questionsAsked++;
 
-  sendBtn.addEventListener('click', async () => {
-    const text = userInput.value.trim();
-    if (!text) return;
-    sendBtn.disabled = true;
-    const response = await getResponse(text);
-    appendMessage('bot', response);
-    userInput.value = '';
-    sendBtn.disabled = false;
-  });
+    // Show typing indicator
+    this.addMessage('detective', '<span class="typing-indicator">Detective Holmes is thinking</span>');
+    
+    setTimeout(() => {
+      this.removeLastMessage();
+      this.processUserInput(input.toLowerCase());
+    }, 1500 + Math.random() * 1000);
+  }
 
-  userInput.addEventListener('keydown', async e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      sendBtn.click();
+  processUserInput(input) {
+    // Accusation system
+    if (input.includes('i accuse') || input.includes('accuse')) {
+      this.handleAccusation(input);
+      return;
     }
-  });
 
-  // Initial load
-  await loadTranslations();
+    // Evidence questions
+    if (input.includes('knife') || input.includes('weapon')) {
+      this.addMessage('detective', `🔪 The bloody knife suggests this was a crime of passion. The killer grabbed whatever was nearby. Have you found the knife yet?`);
+    }
+    else if (input.includes('letter') || input.includes('threat')) {
+      this.addMessage('detective', `📜 The threatening letter is our best lead. Someone wanted the victim scared before they killed him. The handwriting analysis might reveal the killer's identity.`);
+    }
+    else if (input.includes('fingerprint') || input.includes('print')) {
+      this.addMessage('detective', `👆 Fingerprints don't lie! If we can match these to one of our suspects, we'll have our killer. The print is quite clear - someone was careless.`);
+    }
+    else if (input.includes('watch') || input.includes('time')) {
+      this.addMessage('detective', `⌚ The watch stopped at 11:47 PM - likely when the struggle occurred. Those initials "R.B." are very interesting... Robert, perhaps?`);
+    }
+    else if (input.includes('glass') || input.includes('wine') || input.includes('drink')) {
+      this.addMessage('detective', `🥃 Two glasses, one with lipstick marks. The victim was entertaining someone - but who? This suggests the killer was known to the victim.`);
+    }
+    else if (input.includes('footprint') || input.includes('shoes') || input.includes('heel')) {
+      this.addMessage('detective', `👠 Size 7 high heels... That narrows it down significantly. The killer came from the garden, suggesting they knew the house layout well.`);
+    }
+    else if (input.includes('phone') || input.includes('call') || input.includes('text')) {
+      this.addMessage('detective', `📱 "I know what you did" - a powerful motive for murder. Someone was blackmailing the victim, and he knew too much about their secrets.`);
+    }
+    else if (input.includes('key')) {
+      this.addMessage('detective', `🗝️ This old brass key is puzzling. It doesn't fit any lock we've found. Perhaps it opens something valuable - a safe, a box, or another building?`);
+    }
 
-})();
-</script>
+    // Suspect questions
+    else if (input.includes('margaret') || input.includes('wife')) {
+      this.addMessage('detective', `💰 Margaret Blackwood stands to inherit millions. She claims she was asleep, but she's a light sleeper. The timing is suspicious, and she had the most to gain.`);
+    }
+    else if (input.includes('robert') || input.includes('sterling') || input.includes('business')) {
+      this.addMessage('detective', `💼 Robert Sterling was in a heated business dispute with the victim. He's been seen arguing publicly. His alibi of being at a bar seems convenient... too convenient.`);
+    }
+    else if (input.includes('elena') || input.includes('secretary')) {
+      this.addMessage('detective', `💻 Elena Rodriguez, the secretary, filed a harassment complaint last month. She has access to the house and knows the victim's schedule. Working late gives her no solid alibi.`);
+    }
+    else if (input.includes('james') || input.includes('brother')) {
+      this.addMessage('detective', `🎰 James Blackwood was recently cut from the will. His poker alibi needs verification - gambling debts can drive people to desperate measures.`);
+    }
 
-</body>
-</html>
+    // General investigation questions
+    else if (input.includes('motive') || input.includes('why')) {
+      this.addMessage
