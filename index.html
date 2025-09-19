@@ -3,252 +3,285 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>baby ai - Combined Search</title>
+  <title>baby ai - Combined Search & Bible Verses</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 2rem; }
-    select, button, input { margin: 0.5rem 0; padding: 0.5rem; font-size: 1rem; }
-    #verses, #search-results { margin-top: 1rem; }
-    .verse { margin-bottom: 0.8rem; }
-    .verse-number { font-weight: bold; margin-right: 0.5rem; }
+    .container { max-width: 600px; margin-bottom: 3rem; }
+    input[type="text"], select, button {
+      width: 100%;
+      padding: 0.5rem;
+      margin: 0.5rem 0;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    button { cursor: pointer; }
+    #search-results { margin-top: 1rem; }
     .result-item { margin-bottom: 1rem; }
     .result-title { font-weight: bold; font-size: 1.1rem; }
     .result-source { font-size: 0.85rem; color: #555; margin-bottom: 0.3rem; }
-    hr { margin: 2rem 0; }
+    .verse { margin-bottom: 0.8rem; }
+    .verse-number { font-weight: bold; margin-right: 0.5rem; }
+    h2 { border-bottom: 2px solid #333; padding-bottom: 0.25rem; }
+    pre {
+      background: #f7f7f7;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-family: monospace;
+    }
+    label { font-weight: bold; margin-top: 1rem; display: block; }
   </style>
 </head>
 <body>
-  <h1>baby ai</h1>
 
-  <h2>Search Books (OpenLibrary) or Wikipedia</h2>
-  <input type="text" id="search-input" placeholder="Enter search term..." />
-  <button id="search-btn">Search</button>
+  <!-- Search Container -->
+  <div class="container" id="search-container">
+    <h2>Combined Book Search</h2>
+    <input type="text" id="search-input" placeholder="Enter search term..." />
+    <button id="search-btn">Search</button>
+    <div id="search-results"></div>
+  </div>
 
-  <div id="search-results"></div>
+  <!-- Bible API Info Container -->
+  <div class="container" id="bible-api-info">
+    <h2>Bible API - Getting Started</h2>
+    <p>Let's get right into it! The Bible API is structured as a set of JSON files that are available for download from the internet.</p>
+    <p>Using these files, you can get a list of available translations, the list of books for a particular translation, the list of chapters for a particular book, and the content for each chapter.</p>
+    <p>These files are available at the following paths:</p>
+    <pre>
+https://bible.helloao.org/api/available_translations.json
+https://bible.helloao.org/api/{translation}/books.json
+https://bible.helloao.org/api/{translation}/{book}/{chapter}.json
+https://bible.helloao.org/api/available_commentaries.json
+https://bible.helloao.org/api/c/{commentary}/books.json
+https://bible.helloao.org/api/c/{commentary}/{book}/{chapter}.json
+    </pre>
+    <p>For more information about each endpoint, see the next page.</p>
+  </div>
 
-  <hr>
+  <!-- Bible Verse Selector Container -->
+  <div class="container" id="bible-verse-container">
+    <h2>Bible Verse Selector</h2>
 
-  <label for="translation">Choose Translation:</label><br/>
-  <select id="translation"></select><br/>
+    <label for="translation">1. Choose Translation:</label>
+    <select id="translation"></select>
 
-  <label for="book">Choose Book:</label><br/>
-  <select id="book"></select><br/>
+    <label for="book">2. Choose Book:</label>
+    <select id="book"></select>
 
-  <label for="chapter">Choose Chapter:</label><br/>
-  <select id="chapter"></select><br/>
+    <label for="chapter">3. Choose Chapter:</label>
+    <select id="chapter"></select>
 
-  <button id="load">Load Verses</button>
+    <button id="load">Load Verses</button>
 
-  <div id="verses"></div>
+    <div id="verses"></div>
+  </div>
 
-  <script>
-    const apiBase = 'https://bible.helloao.org/api';
+<script>
+  // Elements for combined search
+  const searchInput = document.getElementById('search-input');
+  const searchBtn = document.getElementById('search-btn');
+  const searchResultsDiv = document.getElementById('search-results');
 
-    // Elements
-    const searchInput = document.getElementById('search-input');
-    const searchBtn = document.getElementById('search-btn');
-    const searchResultsDiv = document.getElementById('search-results');
+  // Elements for Bible verse selector
+  const apiBase = 'https://bible.helloao.org/api';
+  const translationSelect = document.getElementById('translation');
+  const bookSelect = document.getElementById('book');
+  const chapterSelect = document.getElementById('chapter');
+  const loadBtn = document.getElementById('load');
+  const versesDiv = document.getElementById('verses');
 
-    const translationSelect = document.getElementById('translation');
-    const bookSelect = document.getElementById('book');
-    const chapterSelect = document.getElementById('chapter');
-    const loadBtn = document.getElementById('load');
-    const versesDiv = document.getElementById('verses');
+  // Combined Search functions
 
-    // --- Bible API functions ---
-
-    async function loadTranslations() {
-      try {
-        const res = await fetch(`${apiBase}/available_translations.json`);
-        const data = await res.json();
-        for (const [key, value] of Object.entries(data)) {
-          const option = document.createElement('option');
-          option.value = key;
-          option.textContent = `${value.name} (${key.toUpperCase()})`;
-          translationSelect.appendChild(option);
-        }
-      } catch (err) {
-        alert('Failed to load translations: ' + err.message);
-      }
-    }
-
-    async function loadBooks(translation) {
-      bookSelect.innerHTML = '';
-      chapterSelect.innerHTML = '';
-      versesDiv.innerHTML = '';
-      try {
-        const res = await fetch(`${apiBase}/${translation}/books.json`);
-        const data = await res.json();
-        data.forEach(book => {
-          const option = document.createElement('option');
-          option.value = book.short_name;
-          option.textContent = book.name;
-          bookSelect.appendChild(option);
-        });
-        if (data.length > 0) {
-          loadChapters(translation, data[0].short_name);
-        }
-      } catch (err) {
-        alert('Failed to load books: ' + err.message);
-      }
-    }
-
-    async function loadChapters(translation, book) {
-      chapterSelect.innerHTML = '';
-      versesDiv.innerHTML = '';
-      try {
-        const booksRes = await fetch(`${apiBase}/${translation}/books.json`);
-        const books = await booksRes.json();
-        const bookData = books.find(b => b.short_name === book);
-        if (!bookData) throw new Error('Book data missing');
-
-        for (let i = 1; i <= bookData.chapters; i++) {
-          const option = document.createElement('option');
-          option.value = i;
-          option.textContent = i;
-          chapterSelect.appendChild(option);
-        }
-      } catch (err) {
-        alert('Failed to load chapters: ' + err.message);
-      }
-    }
-
-    async function loadVerses(translation, book, chapter) {
-      versesDiv.innerHTML = 'Loading...';
-      try {
-        const res = await fetch(`${apiBase}/${translation}/${book}/${chapter}.json`);
-        if (!res.ok) throw new Error('Chapter not found');
-        const data = await res.json();
-        versesDiv.innerHTML = '';
-        data.verses.forEach(v => {
-          const verseEl = document.createElement('div');
-          verseEl.className = 'verse';
-          verseEl.innerHTML = `<span class="verse-number">${v.verse}.</span> ${v.text}`;
-          versesDiv.appendChild(verseEl);
-        });
-      } catch (err) {
-        versesDiv.innerHTML = 'Failed to load verses: ' + err.message;
-      }
-    }
-
-    // --- Combined Search: OpenLibrary first, fallback Wikipedia ---
-
-    async function searchOpenLibrary(query) {
-      try {
-        const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}`);
-        if (!res.ok) throw new Error('OpenLibrary request failed');
-        const data = await res.json();
-        if (data.numFound > 0) {
-          return data.docs.slice(0, 10).map(book => ({
-            title: book.title || 'No title',
-            author: (book.author_name && book.author_name.join(', ')) || 'Unknown author',
-            year: book.first_publish_year || 'N/A',
-            source: 'OpenLibrary'
-          }));
-        }
-        return null;
-      } catch {
-        return null;
-      }
-    }
-
-    async function searchWikipedia(query) {
-      try {
-        // Wikipedia Opensearch API returns array: [searchterm, titles[], descriptions[], urls[]]
-        const url = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=10&namespace=0&format=json&origin=*`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('Wikipedia request failed');
-        const data = await res.json();
-        const [_, titles, descriptions, urls] = data;
-        if (titles.length === 0) return null;
-
-        return titles.map((title, i) => ({
-          title,
-          description: descriptions[i] || '',
-          url: urls[i],
-          source: 'Wikipedia'
+  async function searchOpenLibrary(query) {
+    try {
+      const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}`);
+      if (!res.ok) throw new Error('OpenLibrary request failed');
+      const data = await res.json();
+      if (data.numFound > 0) {
+        return data.docs.slice(0, 10).map(book => ({
+          title: book.title || 'No title',
+          author: (book.author_name && book.author_name.join(', ')) || 'Unknown author',
+          year: book.first_publish_year || 'N/A',
+          source: 'OpenLibrary'
         }));
-      } catch {
-        return null;
       }
+      return null;
+    } catch {
+      return null;
     }
+  }
 
-    async function combinedSearch(query) {
-      searchResultsDiv.innerHTML = 'Searching...';
-      let results = await searchOpenLibrary(query);
+  async function searchWikipedia(query) {
+    try {
+      const url = `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=10&namespace=0&format=json&origin=*`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Wikipedia request failed');
+      const data = await res.json();
+      const [_, titles, descriptions, urls] = data;
+      if (titles.length === 0) return null;
 
+      return titles.map((title, i) => ({
+        title,
+        description: descriptions[i] || '',
+        url: urls[i],
+        source: 'Wikipedia'
+      }));
+    } catch {
+      return null;
+    }
+  }
+
+  async function combinedSearch(query) {
+    searchResultsDiv.innerHTML = 'Searching...';
+    let results = await searchOpenLibrary(query);
+
+    if (results && results.length > 0) {
+      displayResults(results);
+    } else {
+      results = await searchWikipedia(query);
       if (results && results.length > 0) {
         displayResults(results);
       } else {
-        // fallback Wikipedia
-        results = await searchWikipedia(query);
-        if (results && results.length > 0) {
-          displayResults(results);
-        } else {
-          searchResultsDiv.textContent = 'No results found on OpenLibrary or Wikipedia.';
-        }
+        searchResultsDiv.textContent = 'No results found on OpenLibrary or Wikipedia.';
       }
     }
+  }
 
-    function displayResults(results) {
-      searchResultsDiv.innerHTML = '';
-      results.forEach(item => {
-        const div = document.createElement('div');
-        div.className = 'result-item';
+  function displayResults(results) {
+    searchResultsDiv.innerHTML = '';
+    results.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'result-item';
 
-        if (item.source === 'OpenLibrary') {
-          div.innerHTML = `
-            <div class="result-source">Source: OpenLibrary</div>
-            <div class="result-title">${item.title}</div>
-            <div>Author(s): ${item.author}</div>
-            <div>First Published: ${item.year}</div>
-          `;
-        } else if (item.source === 'Wikipedia') {
-          div.innerHTML = `
-            <div class="result-source">Source: Wikipedia</div>
-            <div class="result-title"><a href="${item.url}" target="_blank" rel="noopener">${item.title}</a></div>
-            <div>${item.description}</div>
-          `;
-        }
+      if (item.source === 'OpenLibrary') {
+        div.innerHTML = `
+          <div class="result-source">Source: OpenLibrary</div>
+          <div class="result-title">${item.title}</div>
+          <div>Author(s): ${item.author}</div>
+          <div>First Published: ${item.year}</div>
+        `;
+      } else if (item.source === 'Wikipedia') {
+        div.innerHTML = `
+          <div class="result-source">Source: Wikipedia</div>
+          <div class="result-title"><a href="${item.url}" target="_blank" rel="noopener">${item.title}</a></div>
+          <div>${item.description}</div>
+        `;
+      }
 
-        searchResultsDiv.appendChild(div);
+      searchResultsDiv.appendChild(div);
+    });
+  }
+
+  searchBtn.addEventListener('click', () => {
+    const q = searchInput.value.trim();
+    if (q) {
+      combinedSearch(q);
+    } else {
+      alert('Please enter a search term');
+    }
+  });
+
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') searchBtn.click();
+  });
+
+  // Bible API functions
+
+  async function loadTranslations() {
+    try {
+      const res = await fetch(`${apiBase}/available_translations.json`);
+      const data = await res.json();
+      for (const [key, value] of Object.entries(data)) {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = `${value.name} (${key.toUpperCase()})`;
+        translationSelect.appendChild(option);
+      }
+    } catch (err) {
+      alert('Failed to load translations: ' + err.message);
+    }
+  }
+
+  async function loadBooks(translation) {
+    bookSelect.innerHTML = '';
+    chapterSelect.innerHTML = '';
+    versesDiv.innerHTML = '';
+    try {
+      const res = await fetch(`${apiBase}/${translation}/books.json`);
+      const data = await res.json();
+      data.forEach(book => {
+        const option = document.createElement('option');
+        option.value = book.short_name;
+        option.textContent = book.name;
+        bookSelect.appendChild(option);
       });
+      if (data.length > 0) {
+        loadChapters(translation, data[0].short_name);
+      }
+    } catch (err) {
+      alert('Failed to load books: ' + err.message);
     }
+  }
 
-    // --- Event Listeners ---
+  async function loadChapters(translation, book) {
+    chapterSelect.innerHTML = '';
+    versesDiv.innerHTML = '';
+    try {
+      const booksRes = await fetch(`${apiBase}/${translation}/books.json`);
+      const books = await booksRes.json();
+      const bookData = books.find(b => b.short_name === book);
+      if (!bookData) throw new Error('Book data missing');
 
-    searchBtn.addEventListener('click', () => {
-      const q = searchInput.value.trim();
-      if (q) {
-        combinedSearch(q);
-      } else {
-        alert('Please enter a search term');
+      for (let i = 1; i <= bookData.chapters; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = i;
+        chapterSelect.appendChild(option);
       }
-    });
+    } catch (err) {
+      alert('Failed to load chapters: ' + err.message);
+    }
+  }
 
-    searchInput.addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        searchBtn.click();
-      }
-    });
+  async function loadVerses(translation, book, chapter) {
+    versesDiv.innerHTML = 'Loading...';
+    try {
+      const res = await fetch(`${apiBase}/${translation}/${book}/${chapter}.json`);
+      if (!res.ok) throw new Error('Chapter not found');
+      const data = await res.json();
+      versesDiv.innerHTML = '';
+      data.verses.forEach(v => {
+        const verseEl = document.createElement('div');
+        verseEl.className = 'verse';
+        verseEl.innerHTML = `<span class="verse-number">${v.verse}.</span> ${v.text}`;
+        versesDiv.appendChild(verseEl);
+      });
+    } catch (err) {
+      versesDiv.innerHTML = 'Failed to load verses: ' + err.message;
+    }
+  }
 
-    translationSelect.addEventListener('change', e => {
-      loadBooks(e.target.value);
-    });
+  // Event listeners for Bible UI
+  translationSelect.addEventListener('change', e => {
+    loadBooks(e.target.value);
+  });
 
-    bookSelect.addEventListener('change', e => {
-      loadChapters(translationSelect.value, e.target.value);
-    });
+  bookSelect.addEventListener('change', e => {
+    loadChapters(translationSelect.value, e.target.value);
+  });
 
-    loadBtn.addEventListener('click', () => {
-      loadVerses(translationSelect.value, bookSelect.value, chapterSelect.value);
-    });
+  loadBtn.addEventListener('click', () => {
+    loadVerses(translationSelect.value, bookSelect.value, chapterSelect.value);
+  });
 
-    // Initial load
-    loadTranslations().then(() => {
-      if (translationSelect.value) {
-        loadBooks(translationSelect.value);
-      }
-    });
-  </script>
+  // Initial load Bible Translations
+  loadTranslations().then(() => {
+    if (translationSelect.value) {
+      loadBooks(translationSelect.value);
+    }
+  });
+</script>
+
 </body>
 </html>
