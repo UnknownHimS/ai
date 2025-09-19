@@ -5,65 +5,129 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sci-Fi AI Chatbot</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet" />
-  <style>
-    body {
-      background: radial-gradient(circle at center, #000 30%, #111 100%);
-      color: #0ff;
-      font-family: 'Orbitron', sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      flex-direction: column;
-      overflow: hidden;
+ <script>
+  const chat = document.getElementById('chat');
+  const input = document.getElementById('userInput');
+
+  // Detect intent from input text
+  function detectIntent(input) {
+    const lower = input.toLowerCase();
+    if (lower.includes("born")) return "born";
+    if (lower.includes("died")) return "died";
+    if (lower.includes("when")) return "when";
+    if (lower.includes("who")) return "who";
+    if (lower.includes("where")) return "where";
+    if (lower.includes("how")) return "how";
+    if (lower.includes("why")) return "why";
+    if (lower.includes("what")) return "what";
+    return "what"; // default fallback
+  }
+
+  // Extract topic by filtering out common filler words
+  function extractTopic(input) {
+    const lower = input.toLowerCase().replace(/[?.,!]/g, '');
+    const stopwords = ['what', 'who', 'when', 'where', 'how', 'why', 'born', 'died', 'is', 'are', 'was', 'were', 'the', 'a', 'an', 'of', 'on', 'in', 'to', 'by', 'for', 'about', 'do', 'does', 'did', 'explain', 'define', 'tell', 'me', 'it', 'that', 'you'];
+    const words = lower.split(' ').filter(word => !stopwords.includes(word));
+    return words.slice(0, 4).join(' ');
+  }
+
+  // Fetch Wikipedia summary for topic
+  async function fetchWikiSummary(topic) {
+    if (!topic) return null;
+
+    const formattedTopic = topic
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+
+    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(formattedTopic)}`;
+
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+
+      const data = await res.json();
+      return data.extract || null;
+    } catch {
+      return null;
     }
-    #chat {
-      width: 90%;
-      max-width: 700px;
-      height: 70vh;
-      background: rgba(0, 0, 0, 0.8);
-      border: 2px solid #0ff;
-      padding: 10px;
-      overflow-y: auto;
-      margin-bottom: 10px;
-      box-shadow: 0 0 20px #0ff;
-      border-radius: 10px;
+  }
+
+  // Extract birth and death dates from summary text
+  function extractBirthDeath(summary) {
+    // Pattern: (14 March 1879 – 18 April 1955)
+    const dateRangePattern = /\(([^()]+?)\s*[–-]\s*([^()]+?)\)/;
+    // Pattern: (born 14 March 1879)
+    const singleDatePattern = /\((born\s+)?([^()]+?)\)/i;
+
+    let match = summary.match(dateRangePattern);
+    if (match) {
+      return {
+        birthDate: match[1].trim(),
+        deathDate: match[2].trim()
+      };
     }
-    #chat p {
-      margin: 5px 0;
+
+    match = summary.match(singleDatePattern);
+    if (match) {
+      return {
+        birthDate: match[2].trim(),
+        deathDate: null
+      };
     }
-    .user {
-      color: #0f0;
+
+    return null;
+  }
+
+  // Append message to chat box
+  function appendMessage(sender, text) {
+    const p = document.createElement('p');
+    p.className = sender;
+    p.textContent = (sender === 'user' ? '🧑 You: ' : '🤖 ShabbyBot: ') + text;
+    chat.appendChild(p);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  // Main function to get chatbot response
+  async function getResponse(inputText) {
+    const intent = detectIntent(inputText);
+    const topic = extractTopic(inputText);
+
+    const summary = await fetchWikiSummary(topic);
+
+    if (!summary) return `I couldn't find anything about "${topic}".`;
+
+    const lowerInput = inputText.toLowerCase();
+
+    const dates = extractBirthDeath(summary);
+
+    if ((intent === 'born' || (intent === 'when' && lowerInput.includes('born'))) && dates?.birthDate) {
+      return `${topic.charAt(0).toUpperCase() + topic.slice(1)} was born on ${dates.birthDate}.`;
     }
-    .bot {
-      color: #f0f;
+
+    if ((intent === 'died' || (intent === 'when' && lowerInput.includes('died'))) && dates?.deathDate) {
+      return `${topic.charAt(0).toUpperCase() + topic.slice(1)} died on ${dates.deathDate}.`;
     }
-    #inputArea {
-      width: 90%;
-      max-width: 700px;
-      display: flex;
-    }
-    #inputArea input {
-      flex: 1;
-      padding: 10px;
-      border: none;
-      background: #222;
-      color: #0ff;
-      font-family: 'Orbitron', sans-serif;
-    }
-    #inputArea button {
-      background: #0ff;
-      color: #000;
-      border: none;
-      padding: 10px 20px;
-      cursor: pointer;
-      font-family: 'Orbitron', sans-serif;
-    }
-    #inputArea button:hover {
-      background: #0cc;
-    }
-  </style>
+
+    // Default: return full summary
+    return summary;
+  }
+
+  // Send message handler
+  async function sendMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+    appendMessage('user', text);
+    input.value = '';
+    const botReply = await getResponse(text);
+    appendMessage('bot', botReply);
+  }
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendMessage();
+  });
+</script>
+
 </head>
 <body>
   <h1>Please use proper spelling; this chatbot is still learning.</h1>
