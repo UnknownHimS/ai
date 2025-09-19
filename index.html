@@ -137,27 +137,72 @@
 }
 
 
-  async function fetchWikiWithIntent(input) {
-    const intent = detectIntent(input);
-    const topic = extractSmartTopic(input);
+async function fetchWikiWithIntent(input) {
+  const intent = detectIntent(input);
+  const topic = extractSmartTopic(input);
 
-    if (!topic) return "I couldn't figure out what to search for.";
+  if (!topic) return "I couldn't figure out what to search for.";
 
-    // Combine intent and topic for smarter query, e.g. "what batman" or "born batman"
-    const query = `${intent} ${topic}`.trim();
+  // Combine intent and topic for a smarter search query
+  const query = `${intent} ${topic}`.trim();
 
-    const encodedQuery = encodeURIComponent(query);
-    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodedQuery}`;
+  // Encode only the topic part, since intent is for logic, not for URL
+  const encodedTopic = encodeURIComponent(topic);
 
-    try {
-      const res = await fetch(url);
-      if (!res.ok) return `I couldn't find anything about "${topic}".`;
+  // Use the new REST API endpoint
+  const url = `https://en.wikipedia.org/w/rest.php/v1/page/${encodedTopic}`;
 
-      const data = await res.json();
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return `I couldn't find anything about "${topic}".`;
 
-      if (data.type === 'disambiguation') {
-        return `Hmm... "${topic}" could mean several things. Can you be more specific?\n\nFor example: ${data.title}`;
+    const data = await res.json();
+
+    // This API returns a different format:
+    // The summary is in data.lead.sections[0].text or data.lead.sections[0].content
+    // But it might be HTML, so let's extract plain text by stripping tags.
+    
+    const htmlSummary = data.lead?.sections?.[0]?.text || data.lead?.sections?.[0]?.content || "";
+    
+    // Strip HTML tags from the summary text
+    const summary = htmlSummary.replace(/<[^>]*>?/gm, '') || "No summary available.";
+
+    // Same intent-based extraction as before:
+    switch (intent) {
+      case 'when': {
+        const match = summary.match(/\b(1[0-9]{3}|2[0-9]{3})\b/);
+        return match ? `It happened in ${match[0]}.` : summary;
       }
+      case 'who': {
+        const whoMatch = summary.match(/^([A-Z][a-z]+(?:\s[A-Z][a-z]+)+)/);
+        return whoMatch ? `It was ${whoMatch[1]}.` : summary;
+      }
+      case 'where': {
+        const whereMatch = summary.match(/in\s([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/);
+        return whereMatch ? `It happened in ${whereMatch[1]}.` : summary;
+      }
+      case 'why': {
+        const whyMatch = summary.match(/because\s(.+?)\./i);
+        return whyMatch ? `Because ${whyMatch[1]}.` : summary;
+      }
+      case 'how': {
+        const howMatch = summary.match(/by\s(.+?)\./i);
+        return howMatch ? `It happens by ${howMatch[1]}.` : summary;
+      }
+      case 'born':
+      case 'died': {
+        const bornDiedMatch = summary.match(/(\d{4})/);
+        return bornDiedMatch ? `${intent.charAt(0).toUpperCase() + intent.slice(1)} in ${bornDiedMatch[0]}.` : summary;
+      }
+      default:
+        return summary;
+    }
+  } catch (err) {
+    console.error(err);
+    return "There was a problem fetching info from Wikipedia.";
+  }
+}
+
 
       const summary = data.extract || "No summary available.";
 
