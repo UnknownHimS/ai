@@ -1,0 +1,26 @@
+[
+  { "__comment": "=== BIBLE VERSES & RELATED ===" },
+  {
+    "id": "ask_bible_verse",
+    "keywords": ["bible", "know"],
+    "output": "Do you want me to share a Bible verse?",
+    "expecting": ["yes", "no"]
+  },
+  {
+    "id": "bible_yes",
+    "keywords": ["yes"],
+    "output": "Alright, here’s a verse for you: 'Love your neighbor as yourself.' — Matthew 22:39.",
+    "required_context": "ask_bible_verse"
+  },
+  {
+    "id": "bible_no",
+    "keywords": ["no"],
+    "output": "Okay, should we discuss another topic?",
+    "required_context": "ask_bible_verse"
+  },
+  {
+    "id": "give_bible",
+    "keywords": ["give", "bible"],
+    "output": "You want me to give you a Bible verse? Here’s one: 'Trust in the Lord with all your heart.' — Proverbs 3:5."
+  }
+]
