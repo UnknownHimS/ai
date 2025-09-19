@@ -109,8 +109,9 @@
       return loadedData[category];
     }
 
-    function matchKeywords(keywords, text) {
-      return keywords.every(kw => text.includes(kw));
+      function matchKeywords(keywords, text) {
+      const lowerText = text.toLowerCase();
+      return keywords.every(kw => lowerText.includes(kw.toLowerCase()));
     }
 
     async function fetchWikipediaSummary(topic) {
