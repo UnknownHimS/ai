@@ -22,5 +22,20 @@
     "id": "give_bible",
     "keywords": ["give", "bible"],
     "output": "You want me to give you a Bible verse? Here’s one: 'Trust in the Lord with all your heart.' — Proverbs 3:5."
+  },
+  {
+    "id": "chatgpt_wiki",
+    "keywords": ["what", "chatgpt"],
+    "output": "wiki:ChatGPT"
+  },
+  {
+    "id": "ai_wiki",
+    "keywords": ["what", "artificial", "intelligence"],
+    "output": "wiki:Artificial intelligence"
+  },
+  {
+    "id": "planet_wiki",
+    "keywords": ["what", "planet", "mars"],
+    "output": "wiki:Mars"
   }
 ]
