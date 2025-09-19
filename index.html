@@ -1,165 +1,100 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sci-Fi AI Chatbot with Birth/Death Info</title>
+  <title>Wikipedia Search with Birth Date Extraction</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #111; color: #0ff; }
-    input { padding: 8px; width: 300px; }
-    button { padding: 8px 12px; cursor: pointer; }
+    input { padding: 8px; width: 300px; border: none; border-radius: 4px; }
+    button { padding: 8px 12px; cursor: pointer; background: #0ff; border: none; border-radius: 4px; color: #000; }
+    button:hover { background: #0cc; }
     .result { margin-top: 20px; }
-    #chat { 
-      width: 90%; max-width: 700px; 
-      height: 70vh; background: rgba(0,0,0,0.8);
-      border: 2px solid #0ff; padding: 10px; overflow-y: auto; margin-bottom: 10px;
-      box-shadow: 0 0 20px #0ff; border-radius: 10px; 
-      font-family: 'Orbitron', sans-serif; 
-    }
-    #chat p { margin: 5px 0; }
-    .user { color: #0f0; }
-    .bot { color: #f0f; }
-    #inputArea { width: 90%; max-width: 700px; display: flex; }
-    #inputArea input {
-      flex: 1; padding: 10px; border: none; background: #222; color: #0ff;
-      font-family: 'Orbitron', sans-serif;
-    }
-    #inputArea button {
-      background: #0ff; color: #000; border: none; padding: 10px 20px;
-      font-family: 'Orbitron', sans-serif;
-    }
-    #inputArea button:hover { background: #0cc; }
+    .result-item { margin-bottom: 15px; }
+    a { color: #0ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
+  <h1>Wikipedia Search with Birth Date Extraction</h1>
+  <input type="text" id="searchInput" placeholder="Enter search term" />
+  <button onclick="searchWikipedia()">Search</button>
 
-<h1>Please use proper spelling; this chatbot is still learning.</h1>
+  <div id="results" class="result"></div>
 
-<div id="chat"></div>
-<div id="inputArea">
-  <input type="text" id="userInput" placeholder="Type a message..." />
-  <button onclick="sendMessage()">Send</button>
-</div>
+  <script>
+    function extractBirthInfo(text) {
+      // Extract the first parentheses block
+      const parenMatch = text.match(/\(([^)]+)\)/);
+      if (!parenMatch) return null;
 
-<script>
-  const chat = document.getElementById('chat');
-  const input = document.getElementById('userInput');
+      const inside = parenMatch[1];
 
-  // Append chat messages
-  function appendMessage(sender, text) {
-    const p = document.createElement('p');
-    p.className = sender;
-    p.textContent = (sender === 'user' ? '🧑 You: ' : '🤖 ShabbyBot: ') + text;
-    chat.appendChild(p);
-    chat.scrollTop = chat.scrollHeight;
-  }
+      // Check if inside contains "born" (case-insensitive)
+      const bornMatch = inside.match(/born\s+([^)]+)/i);
+      if (bornMatch) {
+        // Return the born date info after "born"
+        return bornMatch[1].trim();
+      }
 
-  // Extract intent from user input
-  function detectIntent(input) {
-    const lower = input.toLowerCase();
-    if (lower.includes("born")) return "born";
-    if (lower.includes("died")) return "died";
-    if (lower.includes("when")) return "when";
-    if (lower.includes("who")) return "who";
-    if (lower.includes("where")) return "where";
-    if (lower.includes("how")) return "how";
-    if (lower.includes("why")) return "why";
-    if (lower.includes("what")) return "what";
-    return "what"; // default fallback
-  }
+      // Otherwise, check if it looks like a date range or single date (e.g. 14 March 1879 – 18 April 1955)
+      // Simple heuristic: contains digits and dash or just digits and month names
+      const dateRangeRegex = /(\d{1,2}\s\w+\s\d{4})(\s*–\s*(\d{1,2}\s\w+\s\d{4}))?/;
+      const dateRangeMatch = inside.match(dateRangeRegex);
+      if (dateRangeMatch) {
+        return dateRangeMatch[0]; // full matched date range or single date
+      }
 
-  // Extract topic by removing common question words and filler words
-  function extractTopic(input) {
-    let lower = input.toLowerCase();
-    // remove question words, filler words etc
-    const stopwords = ['what', 'who', 'when', 'where', 'how', 'why', 'born', 'died', 'is', 'are', 'was', 'were', 'the', 'a', 'an', 'of', 'on', 'in', 'to', 'by', 'for', 'about', 'do', 'does', 'did', 'explain', 'define', 'tell', 'me', 'it', 'that', 'you', 'good', 'like'];
-    let words = lower.split(/\s+/).filter(word => !stopwords.includes(word));
-    return words.join(' ').trim();
-  }
-
-  // Extract parentheses content but skip simple year ranges like 1990–1995
-  function extractValidDateInfo(text) {
-    const match = text.match(/\(([^)]+)\)/);
-    if (!match) return null;
-
-    const content = match[1].trim();
-
-    // Pattern to detect year range like "1990–1995" or "1990-1995"
-    const yearRangePattern = /^\d{4}[–-]\d{4}$/;
-
-    if (yearRangePattern.test(content)) {
-      // Ignore plain year range (like show years)
-      return null;
+      // Otherwise, return the whole parentheses content as fallback (could be years or something)
+      return inside;
     }
 
-    return content;
-  }
+    async function searchWikipedia() {
+      const queryRaw = document.getElementById('searchInput').value.trim();
+      if (!queryRaw) {
+        alert('Please enter a search term');
+        return;
+      }
 
-  // Fetch Wikipedia summary for topic
-  async function fetchWikiSummary(topic) {
-    if (!topic) return "I couldn't figure out what to search for.";
+      const query = queryRaw.toLowerCase();
 
-    const encodedTopic = encodeURIComponent(topic);
-    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodedTopic}`;
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = 'Loading...';
 
-    try {
-      const res = await fetch(url);
-      if (!res.ok) return `I couldn't find anything about "${topic}".`;
+      // Wikipedia summary API endpoint
+      const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(queryRaw)}`;
 
-      const data = await res.json();
+      try {
+        const response = await fetch(summaryUrl);
+        if (!response.ok) {
+          resultsDiv.innerHTML = `No summary found for "${queryRaw}".`;
+          return;
+        }
 
-      // Return full extract for fallback
-      return data.extract || "No summary available.";
-    } catch (err) {
-      console.error(err);
-      return "There was a problem fetching info from Wikipedia.";
+        const data = await response.json();
+
+        let extract = data.extract || "No summary available.";
+        let displayText = extract;
+
+        // If user asked about birth info ("born" or "when ... born")
+        if (query.includes('born') || query.startsWith('when')) {
+          const birthInfo = extractBirthInfo(extract);
+          if (birthInfo) {
+            displayText = `Birth info found: ${birthInfo}\n\nFull summary:\n${extract}`;
+          }
+        }
+
+        // Display
+        resultsDiv.innerHTML = `
+          <div class="result-item">
+            <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(data.title)}" target="_blank" rel="noopener">${data.title}</a>
+            <p style="white-space: pre-line;">${displayText}</p>
+          </div>
+        `;
+
+      } catch (error) {
+        resultsDiv.innerHTML = 'An error occurred while fetching data.';
+        console.error(error);
+      }
     }
-  }
-
-  // Main function to process user input and generate bot response
-  async function getResponse(text) {
-    const lowerText = text.toLowerCase();
-    const intent = detectIntent(lowerText);
-    const topic = extractTopic(text);
-
-    if (!topic) return "Please specify who or what you want to know about.";
-
-    const summary = await fetchWikiSummary(topic);
-
-    // Try to extract date info from parentheses in summary
-    const dateInfo = extractValidDateInfo(summary);
-
-    // Handle born/died intent specifically
-    if ((intent === 'born' || (intent === 'when' && lowerText.includes('born'))) && dateInfo) {
-      return `${topic.charAt(0).toUpperCase() + topic.slice(1)} was born: ${dateInfo}`;
-    }
-
-    if ((intent === 'died' || (intent === 'when' && lowerText.includes('died'))) && dateInfo) {
-      return `${topic.charAt(0).toUpperCase() + topic.slice(1)} died: ${dateInfo}`;
-    }
-
-    // For other intents or no valid date info, fallback to full summary
-    return summary;
-  }
-
-  // Handle sending message
-  async function sendMessage() {
-    const text = input.value.trim();
-    if (!text) return;
-    appendMessage('user', text);
-    input.value = '';
-    appendMessage('bot', 'Typing...');
-    const botReply = await getResponse(text);
-    // Remove the 'Typing...' placeholder
-    const lastMessage = chat.querySelector('p.bot:last-child');
-    if (lastMessage) lastMessage.remove();
-    appendMessage('bot', botReply);
-  }
-
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') sendMessage();
-  });
-</script>
-
+  </script>
 </body>
 </html>
