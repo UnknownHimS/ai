@@ -137,7 +137,7 @@
     if (!topic) return "I couldn't figure out what to search for.";
 
     const encodedTopic = encodeURIComponent(topic);
-    const url = `https://en.wikipedia.org/wiki/${encodeURIComponent(topic)}`;
+    const url = `https://en.wikipedia.org/wiki/${encodeURIComponent(encodedTopic)}`;
 
     try {
       const res = await fetch(url);
