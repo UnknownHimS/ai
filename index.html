@@ -1,98 +1,163 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mini Chatbot</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #111; color: #0ff; padding: 20px; }
-    input, button { padding: 10px; font-size: 16px; }
-    button { margin-left: 10px; background: #0ff; border: none; color: #000; cursor: pointer; }
-    #output { margin-top: 20px; font-size: 18px; }
-    a { color: #0ff; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wikipedia Birth Date Clarifier Bot</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #111; color: #0ff; padding: 20px; }
+  input, button { padding: 10px; font-size: 16px; }
+  button { margin-left: 10px; background: #0ff; border: none; color: #000; cursor: pointer; }
+  #chat { max-width: 700px; height: 60vh; overflow-y: auto; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 10px; border: 2px solid #0ff; }
+  .user { color: #0f0; margin: 5px 0; }
+  .bot { color: #f0f; margin: 5px 0; }
+  a { color: #0ff; }
+</style>
 </head>
 <body>
 
-  <h2>Mini Chatbot</h2>
-  <input type="text" id="userInput" placeholder="Type a name like Einstein..." />
-  <button onclick="fetchWiki()">Search</button>
+<h2>Wikipedia Date Clarifier Bot</h2>
 
-  <div id="output"></div>
+<div id="chat"></div>
 
-  <script>
-    // Extracts the first valid parentheses content with date info from text
-    function extractDateFromText(text) {
-      const parenRegex = /\(([^)]+)\)/g;
-      let match;
-      while ((match = parenRegex.exec(text)) !== null) {
-        const content = match[1].trim();
-        // Ignore plain year ranges like 1990–1995 or 2001-2005
-        if (/^\d{4}[–-]\d{4}$/.test(content)) continue;
+<div>
+  <input type="text" id="userInput" placeholder="Ask about a person or type a name..." />
+  <button onclick="sendMessage()">Send</button>
+</div>
 
-        // A basic date pattern: contains digits and months or years
-        if (/\d{4}/.test(content) || /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/i.test(content)) {
-          return content;
-        }
-      }
+<script>
+  const chat = document.getElementById('chat');
+  const input = document.getElementById('userInput');
+
+  // State to hold possible ambiguous matches
+  let ambiguousMatches = null;
+  let lastQuery = "";
+
+  function appendMessage(sender, text) {
+    const p = document.createElement('p');
+    p.className = sender;
+    p.textContent = (sender === 'user' ? '🧑 You: ' : '🤖 ShabbyBot: ') + text;
+    chat.appendChild(p);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  // Extract date info from snippet parentheses
+  function extractDateFromSnippet(snippet) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = snippet;
+    const cleanText = tempDiv.textContent || "";
+
+    const parenRegex = /\(([^)]+)\)/g;
+    let match;
+    while ((match = parenRegex.exec(cleanText)) !== null) {
+      const content = match[1].trim();
+      // Ignore year ranges like 1990–1995
+      if (/^\d{4}[–-]\d{4}$/.test(content)) continue;
+      if (content.match(/\d{4}/)) return content;
+    }
+    return null;
+  }
+
+  // Fetch search results from Wikipedia API
+  async function fetchWikiSearch(topic) {
+    const endpoint = `https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srsearch=${encodeURIComponent(topic)}`;
+
+    try {
+      const res = await fetch(endpoint);
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (!data.query || !data.query.search || data.query.search.length === 0) return null;
+      return data.query.search;
+    } catch (e) {
+      console.error(e);
       return null;
     }
+  }
 
-    async function fetchWiki() {
-      const query = document.getElementById('userInput').value.trim();
-      const output = document.getElementById('output');
-      output.innerHTML = 'Searching...';
+  // Fetch snippet for a specific title
+  async function fetchSnippetForTitle(title) {
+    const endpoint = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&format=json&origin=*&titles=${encodeURIComponent(title)}`;
+    try {
+      const res = await fetch(endpoint);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const pages = data.query.pages;
+      const page = Object.values(pages)[0];
+      return page.extract || null;
+    } catch (e) {
+      console.error(e);
+      return null;
+    }
+  }
 
-      if (!query) {
-        output.innerHTML = 'Please enter a topic or name.';
-        return;
-      }
+  async function sendMessage() {
+    const userText = input.value.trim();
+    if (!userText) return;
+    appendMessage('user', userText);
+    input.value = '';
 
-      try {
-        // 1. Search for the topic
-        const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srsearch=${encodeURIComponent(query)}`;
-        const searchRes = await fetch(searchUrl);
-        const searchData = await searchRes.json();
-        const firstResult = searchData?.query?.search?.[0];
-        if (!firstResult) {
-          output.innerHTML = `No results found for "${query}".`;
-          return;
-        }
-
-        const title = firstResult.title;
-
-        // 2. Fetch the full extract of the first result page
-        const extractUrl = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&format=json&origin=*&titles=${encodeURIComponent(title)}`;
-        const extractRes = await fetch(extractUrl);
-        const extractData = await extractRes.json();
-
-        const pages = extractData.query.pages;
-        const pageId = Object.keys(pages)[0];
-        const extractText = pages[pageId]?.extract || "";
-
-        // Extract dates from the full extract text
-        const dateInfo = extractDateFromText(extractText);
-
+    // If we have ambiguous matches waiting for clarification:
+    if (ambiguousMatches) {
+      // Check if userText matches one of the saved titles
+      const matchedTitle = ambiguousMatches.find(title => title.toLowerCase() === userText.toLowerCase());
+      if (matchedTitle) {
+        appendMessage('bot', `Fetching info for ${matchedTitle}...`);
+        const snippet = await fetchSnippetForTitle(matchedTitle);
+        const dateInfo = extractDateFromSnippet(snippet || "");
+        let reply = "";
         if (dateInfo) {
-          output.innerHTML = `<strong>${title}</strong> dates found: <strong>${dateInfo}</strong><br>
-            <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(title)}" target="_blank">Read more on Wikipedia</a>`;
+          reply = `${matchedTitle} dates found: ${dateInfo}`;
         } else {
-          output.innerHTML = `<strong>${title}</strong><br>${extractText}...<br>
-            <em>(No date info found in extract)</em><br>
-            <a href="https://en.wikipedia.org/wiki/${encodeURIComponent(title)}" target="_blank">Read more on Wikipedia</a>`;
+          reply = `${matchedTitle} info: ${snippet || '(No date info found)'}`;
         }
-
-      } catch (error) {
-        console.error(error);
-        output.innerHTML = 'An error occurred while fetching data.';
+        appendMessage('bot', reply);
+        ambiguousMatches = null; // reset state
+        lastQuery = matchedTitle;
+        return;
+      } else {
+        appendMessage('bot', `I couldn't find "${userText}" in the options. Please pick one of the following:\n${ambiguousMatches.join('\n')}`);
+        return;
       }
     }
 
-    // Enter key triggers search
-    document.getElementById('userInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter') fetchWiki();
-    });
-  </script>
+    // No ambiguous state => perform new search
+    appendMessage('bot', 'Searching Wikipedia...');
+    lastQuery = userText;
+
+    // Search Wikipedia
+    const results = await fetchWikiSearch(userText);
+    if (!results) {
+      appendMessage('bot', `No results found for "${userText}".`);
+      return;
+    }
+
+    // If multiple matches, ask for clarification if ambiguous
+    if (results.length > 1) {
+      // Get list of titles for clarification
+      const titles = results.slice(0, 5).map(r => r.title);
+      ambiguousMatches = titles; // save state
+
+      appendMessage('bot', `I found multiple matches for "${userText}":\n${titles.map((t, i) => `${i+1}. ${t}`).join('\n')}\nPlease type the exact name to clarify.`);
+      return;
+    }
+
+    // Single result: display info
+    const single = results[0];
+    const snippet = single.snippet;
+    const title = single.title;
+    const dateInfo = extractDateFromSnippet(snippet);
+
+    if (dateInfo) {
+      appendMessage('bot', `${title} dates found: ${dateInfo}`);
+    } else {
+      appendMessage('bot', `${title} info: ${snippet.replace(/<\/?[^>]+(>|$)/g, "")}... (No date info found)`);
+    }
+  }
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendMessage();
+  });
+</script>
 
 </body>
 </html>
