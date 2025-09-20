@@ -1,205 +1,230 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Wiki Search with Speech</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    max-width: 600px;
-    margin: 30px auto;
-    background: #f0f4f8;
-    padding: 20px;
-  }
-  h2 {
-    border-bottom: 2px solid #4a90e2;
-    padding-bottom: 5px;
-    margin-top: 40px;
-  }
-  .container {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px #aaa4;
-    margin-top: 20px;
-  }
-  button {
-    font-size: 1.1rem;
-    padding: 10px 18px;
-    margin: 10px 8px 10px 0;
-    cursor: pointer;
-  }
-  #wiki-transcript {
-    background: #eef5fb;
-    padding: 15px;
-    min-height: 120px;
-    white-space: pre-wrap;
-    border-radius: 6px;
-    border: 1px solid #c1d3f8;
-    margin-top: 10px;
-  }
-  #wiki-status {
-    font-weight: bold;
-    margin-top: 10px;
-    min-height: 1.4em;
-    color: #333;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wiki Multi‑Topic Search + TTS</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 700px;
+      margin: 30px auto;
+      background: #fafafa;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 6px #ccc;
+    }
+    button {
+      padding: 10px 18px;
+      font-size: 1rem;
+      margin: 10px 5px;
+      cursor: pointer;
+    }
+    .topic-block {
+      margin: 15px 0;
+      padding: 10px;
+      background: #eef5ff;
+      border: 1px solid #c0d4ff;
+      border-radius: 6px;
+    }
+    .topic-block strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+    #status {
+      font-weight: bold;
+      margin: 10px 0;
+      color: #333;
+    }
+    #results {
+      margin-top: 20px;
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
+    <h2>Wiki Search + Multiple Topics</h2>
+    <button id="listen-btn">Start Listening</button>
+    <button id="stop-btn" disabled>Stop Listening</button>
+    <div id="status">Click “Start Listening”, say topics (like "Batman and Einstein"), then say “stop”.</div>
+    <div id="results"></div>
+  </div>
 
-<section class="container" id="wiki-container">
-  <h2>Wiki Search (Say "stop" to search)</h2>
-  <button id="wiki-start-btn">Start Listening</button>
-  <button id="wiki-stop-btn" disabled>Stop Listening</button>
-  <div id="wiki-status">Press "Start Listening", say your topic, then say "stop" to search Wikipedia.</div>
-  <div id="wiki-transcript"></div>
-</section>
+  <script>
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const listenBtn = document.getElementById('listen-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const statusDiv = document.getElementById('status');
+    const resultsDiv = document.getElementById('results');
 
-<script>
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const wikiStartBtn = document.getElementById("wiki-start-btn");
-  const wikiStopBtn = document.getElementById("wiki-stop-btn");
-  const wikiStatusDiv = document.getElementById("wiki-status");
-  const wikiTranscriptDiv = document.getElementById("wiki-transcript");
+    let recognition;
+    let listening = false;
 
-  let wikiRecognition;
-  let wikiListening = false;
+    // load voices for TTS
+    let voices = [];
+    function loadVoices() {
+      voices = speechSynthesis.getVoices();
+      if (!voices.length) setTimeout(loadVoices, 100);
+    }
+    loadVoices();
+    speechSynthesis.onvoiceschanged = loadVoices;
 
-  let voices = [];
-  function loadVoices() {
-    voices = speechSynthesis.getVoices();
-    if (!voices.length) setTimeout(loadVoices, 100);
-  }
-  loadVoices();
-  speechSynthesis.onvoiceschanged = loadVoices;
+    function speak(text) {
+      if (!text) return;
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.rate = 0.9;
+      utt.pitch = 1.0;
+      const voice = voices.find(v => v.lang.startsWith('en')) || null;
+      if (voice) utt.voice = voice;
+      speechSynthesis.speak(utt);
+    }
 
-  function speak(text) {
-    return new Promise((resolve, reject) => {
-      if (!text) return resolve();
-      if (speechSynthesis.speaking) speechSynthesis.cancel();
+    function extractTopics(raw) {
+      // split by "and", comma, etc.
+      raw = raw.toLowerCase();
+      // remove filler words
+      const filler = ['what','is','the','a','an','and','tell','me','about','please','of','for'];
+      let words = raw.split(/\s+/).filter(w => w && !filler.includes(w));
+      // Now join back and split by keywords like "and"
+      // But simpler: if user said "batman and einstein", it splits on "and"
+      const parts = raw.split(/\band\b/);
+      if (parts.length > 1) {
+        return parts.map(p => p.trim()).filter(p => p.length > 0);
+      }
+      // else maybe comma separated
+      const parts2 = raw.split(/,|;/);
+      if (parts2.length > 1) {
+        return parts2.map(p => p.trim()).filter(p => p.length > 0);
+      }
+      // fallback: return whole phrase
+      return [ raw.trim() ];
+    }
 
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.rate = 0.85;
-      utter.pitch = 1.1;
+    async function searchTopics(query) {
+      const url = `https://en.wikipedia.org/w/api.php?action=query&origin=*&format=json&list=search&srsearch=${encodeURIComponent(query)}&srlimit=5`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.query && data.query.search) {
+          return data.query.search.map(item => item.title);
+        }
+        return [];
+      } catch (err) {
+        console.error('searchTopics error', err);
+        return [];
+      }
+    }
 
-      const voice = voices.find(v => v.lang.startsWith("en") && v.name.toLowerCase().includes("male")) || voices.find(v => v.lang.startsWith("en"));
-      if (voice) utter.voice = voice;
+    async function fetchSummary(title) {
+      const url = `https://en.wikipedia.org/w/api.php?action=query&origin=*&format=json&prop=extracts&exintro=true&explaintext=true&redirects=1&titles=${encodeURIComponent(title)}`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        const pages = data.query.pages;
+        const pid = Object.keys(pages)[0];
+        if (pid === "-1") return `No summary found for "${title}".`;
+        return pages[pid].extract || `No extract available for "${title}".`;
+      } catch (err) {
+        console.error('fetchSummary error', err);
+        return `Failed to fetch summary for "${title}".`;
+      }
+    }
 
-      utter.onend = () => resolve();
-      utter.onerror = (e) => reject(e);
+    listenBtn.addEventListener('click', () => {
+      if (!SpeechRecognition) {
+        statusDiv.textContent = "SpeechRecognition not supported in this browser.";
+        return;
+      }
+      if (listening) return;
 
-      speechSynthesis.speak(utter);
-    });
-  }
-
-  function fetchWikiSummary(query) {
-    return fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`)
-      .then(res => {
-        if (!res.ok) throw new Error("No Wikipedia page found");
-        return res.json();
-      })
-      .then(data => data.extract || "")
-      .catch(() => "");
-  }
-
-  if (!SpeechRecognition) {
-    wikiStartBtn.disabled = true;
-    wikiStopBtn.disabled = true;
-    wikiStatusDiv.textContent = "Speech Recognition API not supported in this browser.";
-    wikiTranscriptDiv.textContent = "";
-  } else {
-    wikiStartBtn.addEventListener("click", () => {
-      if (wikiListening) return;
-
-      wikiRecognition = new SpeechRecognition();
-      wikiRecognition.lang = "en-US";
-      wikiRecognition.continuous = true;
-      wikiRecognition.interimResults = true;
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = true;
+      recognition.interimResults = true;
 
       let finalTranscript = "";
 
-      wikiRecognition.onresult = (event) => {
-        let interimTranscript = "";
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          let transcriptPart = event.results[i][0].transcript.toLowerCase();
-
-          if (transcriptPart.includes("stop")) {
-            transcriptPart = transcriptPart.replace(/\bstop\b/g, "").trim();
-
-            if (event.results[i].isFinal) finalTranscript += transcriptPart + " ";
-            else interimTranscript += transcriptPart + " ";
-
-            wikiRecognition.stop();
-            return;
+      recognition.onresult = (evt) => {
+        let interim = "";
+        for (let i = evt.resultIndex; i < evt.results.length; i++) {
+          let part = evt.results[i][0].transcript;
+          if (part.toLowerCase().includes("stop")) {
+            part = part.replace(/stop/gi, "").trim();
+            if (evt.results[i].isFinal) finalTranscript += part + " ";
+            recognition.stop();
+            break;
           } else {
-            if (event.results[i].isFinal) finalTranscript += transcriptPart + " ";
-            else interimTranscript += transcriptPart + " ";
+            if (evt.results[i].isFinal) finalTranscript += part + " ";
+            else interim += part + " ";
           }
         }
-
-        wikiTranscriptDiv.textContent = finalTranscript + interimTranscript;
-        wikiStatusDiv.textContent = "🎤 Listening... Say 'stop' to search";
+        statusDiv.textContent = "🎧 You said: " + (finalTranscript + interim).trim();
       };
 
-      wikiRecognition.onerror = (event) => {
-        wikiStatusDiv.textContent = `❌ Recognition error: ${event.error}`;
-        stopWikiRecognition();
-      };
+      recognition.onend = async () => {
+        listening = false;
+        stopBtn.disabled = true;
 
-      wikiRecognition.onend = async () => {
-        if (!wikiListening) return;
-
-        wikiListening = false;
-        wikiStartBtn.disabled = false;
-        wikiStopBtn.disabled = true;
-
-        let query = wikiTranscriptDiv.textContent.trim();
-        if (!query) {
-          wikiStatusDiv.textContent = "⚠️ No query detected. Press 'Start Listening' to try again.";
+        const raw = statusDiv.textContent.replace("🎧 You said:","").trim();
+        if (!raw) {
+          statusDiv.textContent = "No speech detected. Try again.";
           return;
         }
 
-        wikiStatusDiv.textContent = `⏳ Searching Wikipedia for: "${query}"...`;
-        try {
-          const summary = await fetchWikiSummary(query);
-          if (summary) {
-            wikiTranscriptDiv.textContent = summary;
-            wikiStatusDiv.textContent = "📢 Speaking Wikipedia summary...";
-            await speak(summary);
-            wikiStatusDiv.textContent = "✅ Done! Press 'Start Listening' to ask again.";
-          } else {
-            wikiStatusDiv.textContent = `⚠️ No Wikipedia summary found for "${query}".`;
-            await speak(`Sorry, I couldn't find anything about ${query}.`);
-          }
-        } catch {
-          wikiStatusDiv.textContent = "❌ Error fetching Wikipedia data.";
-          await speak("Sorry, there was an error fetching the data.");
+        statusDiv.textContent = `Searching topics for "${raw}"...`;
+        const topics = extractTopics(raw);
+        let allTitles = [];
+        // For each topic, search titles
+        for (const t of topics) {
+          const titles = await searchTopics(t);
+          allTitles = allTitles.concat(titles);
+        }
+        // dedupe
+        allTitles = [...new Set(allTitles)];
+        if (allTitles.length === 0) {
+          statusDiv.textContent = `No topics found for "${raw}".`;
+          return;
+        }
+        statusDiv.textContent = `Found these topics:`;
+        resultsDiv.innerHTML = '';
+        for (const title of allTitles) {
+          const summary = await fetchSummary(title);
+          const block = document.createElement('div');
+          block.className = 'topic-block';
+          const titleElem = document.createElement('strong');
+          titleElem.textContent = title;
+          block.appendChild(titleElem);
+          const para = document.createElement('p');
+          para.textContent = summary;
+          block.appendChild(para);
+          const btnSpeak = document.createElement('button');
+          btnSpeak.textContent = '🔊 Speak this';
+          btnSpeak.addEventListener('click', () => speak(summary));
+          block.appendChild(btnSpeak);
+          resultsDiv.appendChild(block);
         }
       };
 
-      wikiRecognition.start();
-      wikiListening = true;
-      wikiStartBtn.disabled = true;
-      wikiStopBtn.disabled = false;
-      wikiStatusDiv.textContent = "🎧 Listening... Say your topic, then say 'stop' to search Wikipedia.";
-      wikiTranscriptDiv.textContent = "";
+      recognition.onerror = (e) => {
+        statusDiv.textContent = `Error: ${e.error}`;
+        listening = false;
+      };
+
+      recognition.start();
+      listening = true;
+      statusDiv.textContent = "🎤 Listening... speak now then say 'stop'";
+      stopBtn.disabled = false;
+      resultsDiv.innerHTML = '';
     });
 
-    wikiStopBtn.addEventListener("click", stopWikiRecognition);
+    stopBtn.addEventListener('click', () => {
+      if (listening && recognition) recognition.stop();
+    });
 
-    function stopWikiRecognition() {
-      if (!wikiListening) return;
-      wikiRecognition.stop();
-      wikiListening = false;
-      wikiStartBtn.disabled = false;
-      wikiStopBtn.disabled = true;
-      wikiStatusDiv.textContent = "🛑 Listening stopped. Press 'Start Listening' to try again.";
-    }
-  }
-</script>
-
+  </script>
 </body>
 </html>
