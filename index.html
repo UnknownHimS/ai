@@ -1,238 +1,286 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Wiki Multi‑Topic Search + TTS</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 700px;
-      margin: 30px auto;
-      background: #fafafa;
-      padding: 20px;
-    }
-    .container {
-      background: white;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 6px #ccc;
-    }
-    button {
-      padding: 8px 14px;
-      font-size: 1rem;
-      margin-left: 10px;
-      cursor: pointer;
-    }
-    .topic-block {
-      margin: 15px 0;
-      padding: 10px;
-      background: #eef5ff;
-      border: 1px solid #c0d4ff;
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .topic-title {
-      font-weight: bold;
-      font-size: 1.1rem;
-    }
-    #status {
-      font-weight: bold;
-      margin: 10px 0;
-      color: #333;
-    }
-    #results {
-      margin-top: 20px;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wiki Search Titles Only + Speak Summary</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap');
+  
+  body {
+    font-family: 'Montserrat', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    margin: 0;
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    box-sizing: border-box;
+  }
+  .container {
+    background: #1f1f3d;
+    border-radius: 16px;
+    padding: 30px 40px;
+    max-width: 700px;
+    width: 100%;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  }
+  h2 {
+    font-weight: 600;
+    font-size: 2.2rem;
+    margin-bottom: 30px;
+    text-align: center;
+    letter-spacing: 1.2px;
+    color: #f5f5f7;
+  }
+  #status {
+    text-align: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    min-height: 30px;
+    color: #a3a3f7;
+    user-select: none;
+  }
+  button#listen-btn, button#stop-btn {
+    background: linear-gradient(90deg, #f6d365 0%, #fda085 100%);
+    border: none;
+    border-radius: 30px;
+    color: #1f1f3d;
+    font-weight: 700;
+    font-size: 1.1rem;
+    padding: 14px 28px;
+    cursor: pointer;
+    margin: 0 8px 30px 8px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 4px 15px rgba(253, 160, 133, 0.5);
+    user-select: none;
+  }
+  button#listen-btn:hover:not(:disabled),
+  button#stop-btn:hover:not(:disabled) {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(253, 160, 133, 0.7);
+  }
+  button#stop-btn:disabled,
+  button#listen-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  #results {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  #results button {
+    background: #3a3a6e;
+    border: none;
+    border-radius: 12px;
+    color: #e0e0ff;
+    font-size: 1.15rem;
+    font-weight: 600;
+    padding: 16px 20px;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(58, 58, 110, 0.6);
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+  }
+  #results button:hover {
+    background: #5a5abb;
+    box-shadow: 0 6px 20px rgba(90, 90, 187, 0.8);
+  }
+  #results button:active {
+    transform: scale(0.98);
+  }
+  /* Scrollbar for results if too long */
+  #results {
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+  #results::-webkit-scrollbar {
+    width: 6px;
+  }
+  #results::-webkit-scrollbar-thumb {
+    background-color: #918fdf;
+    border-radius: 3px;
+  }
+</style>
 </head>
 <body>
-  <div class="container">
-    <h2>Wiki Search + Multiple Topics</h2>
-    <button id="listen-btn">Start Listening</button>
-    <button id="stop-btn" disabled>Stop Listening</button>
-    <div id="status">Click “Start Listening”, say topics (like "Batman and Einstein"), then say “stop”.</div>
-    <div id="results"></div>
+  <div class="container" role="main" aria-label="Wiki search and speak">
+    <h2>Wiki Search Titles Only</h2>
+    <div style="text-align:center; margin-bottom: 20px;">
+      <button id="listen-btn" aria-pressed="false" aria-label="Start listening for topics">Start Listening</button>
+      <button id="stop-btn" disabled aria-label="Stop listening">Stop Listening</button>
+    </div>
+    <div id="status" aria-live="polite" aria-atomic="true">Click “Start Listening”, say topics (like "Batman and Einstein"), then say “stop”.</div>
+    <div id="results" aria-live="polite" aria-atomic="true"></div>
   </div>
 
-  <script>
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const listenBtn = document.getElementById('listen-btn');
-    const stopBtn = document.getElementById('stop-btn');
-    const statusDiv = document.getElementById('status');
-    const resultsDiv = document.getElementById('results');
+<script>
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const listenBtn = document.getElementById('listen-btn');
+  const stopBtn = document.getElementById('stop-btn');
+  const statusDiv = document.getElementById('status');
+  const resultsDiv = document.getElementById('results');
 
-    let recognition;
-    let listening = false;
-    let currentUtterance = null;
+  let recognition;
+  let listening = false;
+  let voices = [];
+  let currentUtterance = null;
 
-    // load voices for TTS
-    let voices = [];
-    function loadVoices() {
-      voices = speechSynthesis.getVoices();
-      if (!voices.length) setTimeout(loadVoices, 100);
+  function loadVoices() {
+    voices = speechSynthesis.getVoices();
+    if (!voices.length) setTimeout(loadVoices, 100);
+  }
+  loadVoices();
+  speechSynthesis.onvoiceschanged = loadVoices;
+
+  function speak(text) {
+    if (!text) return;
+    if (speechSynthesis.speaking) {
+      speechSynthesis.cancel();
     }
-    loadVoices();
-    speechSynthesis.onvoiceschanged = loadVoices;
-
-    function speak(text) {
-      if (!text) return;
-      if (speechSynthesis.speaking && currentUtterance) {
-        speechSynthesis.cancel();
-      }
-      currentUtterance = new SpeechSynthesisUtterance(text);
-      currentUtterance.rate = 0.9;
-      currentUtterance.pitch = 1.0;
-      const voice = voices.find(v => v.lang.startsWith('en')) || null;
+    currentUtterance = new SpeechSynthesisUtterance(text);
+    currentUtterance.rate = 0.9;
+    currentUtterance.pitch = 1.0;
+    // Prefer female English voice
+    const femaleVoice = voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('female'));
+    if (femaleVoice) {
+      currentUtterance.voice = femaleVoice;
+    } else {
+      // fallback to first English voice
+      const voice = voices.find(v => v.lang.startsWith('en'));
       if (voice) currentUtterance.voice = voice;
-      speechSynthesis.speak(currentUtterance);
     }
+    speechSynthesis.speak(currentUtterance);
+  }
 
-    function extractTopics(raw) {
-      raw = raw.toLowerCase();
-      const filler = ['what','is','the','a','an','and','tell','me','about','please','of','for'];
-      let words = raw.split(/\s+/).filter(w => w && !filler.includes(w));
-      const parts = raw.split(/\band\b/);
-      if (parts.length > 1) {
-        return parts.map(p => p.trim()).filter(p => p.length > 0);
-      }
-      const parts2 = raw.split(/,|;/);
-      if (parts2.length > 1) {
-        return parts2.map(p => p.trim()).filter(p => p.length > 0);
-      }
-      return [ raw.trim() ];
+  function extractTopics(raw) {
+    raw = raw.toLowerCase();
+    const filler = ['what','is','the','a','an','and','tell','me','about','please','of','for'];
+    let parts = raw.split(/\band\b/).map(p => p.trim());
+    if(parts.length <= 1){
+      parts = raw.split(/,|;/).map(p => p.trim());
     }
+    parts = parts.map(p => p.split(/\s+/).filter(w => w && !filler.includes(w)).join(' '));
+    return parts.filter(p => p.length > 0);
+  }
 
-    async function searchTopics(query) {
-      const url = `https://en.wikipedia.org/w/api.php?action=query&origin=*&format=json&list=search&srsearch=${encodeURIComponent(query)}&srlimit=5`;
-      try {
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.query && data.query.search) {
-          return data.query.search.map(item => item.title);
+  async function searchTopics(query) {
+    const url = `https://en.wikipedia.org/w/api.php?action=query&origin=*&format=json&list=search&srsearch=${encodeURIComponent(query)}&srlimit=5`;
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.query && data.query.search) {
+        return data.query.search.map(item => item.title);
+      }
+      return [];
+    } catch (err) {
+      console.error('searchTopics error', err);
+      return [];
+    }
+  }
+
+  async function fetchSummary(title) {
+    const url = `https://en.wikipedia.org/w/api.php?action=query&origin=*&format=json&prop=extracts&exintro=true&explaintext=true&redirects=1&titles=${encodeURIComponent(title)}`;
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      const pages = data.query.pages;
+      const pid = Object.keys(pages)[0];
+      if (pid === "-1") return `No summary found for "${title}".`;
+      return pages[pid].extract || `No extract available for "${title}".`;
+    } catch (err) {
+      console.error('fetchSummary error', err);
+      return `Failed to fetch summary for "${title}".`;
+    }
+  }
+
+  listenBtn.addEventListener('click', () => {
+    if (!SpeechRecognition) {
+      statusDiv.textContent = "SpeechRecognition not supported in this browser.";
+      return;
+    }
+    if (listening) return;
+
+    recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    let finalTranscript = "";
+
+    recognition.onresult = (evt) => {
+      let interim = "";
+      for (let i = evt.resultIndex; i < evt.results.length; i++) {
+        let part = evt.results[i][0].transcript;
+        if (part.toLowerCase().includes("stop")) {
+          part = part.replace(/stop/gi, "").trim();
+          if (evt.results[i].isFinal) finalTranscript += part + " ";
+          recognition.stop();
+          break;
+        } else {
+          if (evt.results[i].isFinal) finalTranscript += part + " ";
+          else interim += part + " ";
         }
-        return [];
-      } catch (err) {
-        console.error('searchTopics error', err);
-        return [];
       }
-    }
+      statusDiv.textContent = "🎧 You said: " + (finalTranscript + interim).trim();
+    };
 
-    async function fetchSummary(title) {
-      const url = `https://en.wikipedia.org/w/api.php?action=query&origin=*&format=json&prop=extracts&exintro=true&explaintext=true&redirects=1&titles=${encodeURIComponent(title)}`;
-      try {
-        const res = await fetch(url);
-        const data = await res.json();
-        const pages = data.query.pages;
-        const pid = Object.keys(pages)[0];
-        if (pid === "-1") return `No summary found for "${title}".`;
-        return pages[pid].extract || `No extract available for "${title}".`;
-      } catch (err) {
-        console.error('fetchSummary error', err);
-        return `Failed to fetch summary for "${title}".`;
-      }
-    }
+    recognition.onend = async () => {
+      listening = false;
+      stopBtn.disabled = true;
 
-    listenBtn.addEventListener('click', () => {
-      if (!SpeechRecognition) {
-        statusDiv.textContent = "SpeechRecognition not supported in this browser.";
+      const raw = statusDiv.textContent.replace("🎧 You said:","").trim();
+      if (!raw) {
+        statusDiv.textContent = "No speech detected. Try again.";
         return;
       }
-      if (listening) return;
 
-      recognition = new SpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.continuous = true;
-      recognition.interimResults = true;
-
-      let finalTranscript = "";
-
-      recognition.onresult = (evt) => {
-        let interim = "";
-        for (let i = evt.resultIndex; i < evt.results.length; i++) {
-          let part = evt.results[i][0].transcript;
-          if (part.toLowerCase().includes("stop")) {
-            part = part.replace(/stop/gi, "").trim();
-            if (evt.results[i].isFinal) finalTranscript += part + " ";
-            recognition.stop();
-            break;
-          } else {
-            if (evt.results[i].isFinal) finalTranscript += part + " ";
-            else interim += part + " ";
-          }
-        }
-        statusDiv.textContent = "🎧 You said: " + (finalTranscript + interim).trim();
-      };
-
-      recognition.onend = async () => {
-        listening = false;
-        stopBtn.disabled = true;
-
-        const raw = statusDiv.textContent.replace("🎧 You said:","").trim();
-        if (!raw) {
-          statusDiv.textContent = "No speech detected. Try again.";
-          return;
-        }
-
-        statusDiv.textContent = `Searching topics for "${raw}"...`;
-        const topics = extractTopics(raw);
-        let allTitles = [];
-        for (const t of topics) {
-          const titles = await searchTopics(t);
-          allTitles = allTitles.concat(titles);
-        }
-        allTitles = [...new Set(allTitles)];
-        if (allTitles.length === 0) {
-          statusDiv.textContent = `No topics found for "${raw}".`;
-          return;
-        }
-        statusDiv.textContent = `Found these topics:`;
-        resultsDiv.innerHTML = '';
-        for (const title of allTitles) {
-          const block = document.createElement('div');
-          block.className = 'topic-block';
-
-          const titleElem = document.createElement('span');
-          titleElem.className = 'topic-title';
-          titleElem.textContent = title;
-
-          const btnSpeak = document.createElement('button');
-          btnSpeak.textContent = '🔊 Speak summary';
-          btnSpeak.addEventListener('click', async () => {
-            if (speechSynthesis.speaking) speechSynthesis.cancel();
-            statusDiv.textContent = `Fetching summary for "${title}"...`;
-            const summary = await fetchSummary(title);
-            statusDiv.textContent = `Speaking summary for "${title}"...`;
-            speak(summary);
-            // reset status after speech ends
-            currentUtterance.onend = () => {
-              statusDiv.textContent = 'Click “Start Listening”, say topics, then say “stop”.';
-            };
-          });
-
-          block.appendChild(titleElem);
-          block.appendChild(btnSpeak);
-          resultsDiv.appendChild(block);
-        }
-      };
-
-      recognition.onerror = (e) => {
-        statusDiv.textContent = `Error: ${e.error}`;
-        listening = false;
-      };
-
-      recognition.start();
-      listening = true;
-      statusDiv.textContent = "🎤 Listening... speak now then say 'stop'";
-      stopBtn.disabled = false;
+      statusDiv.textContent = `Searching topics for "${raw}"...`;
+      const topics = extractTopics(raw);
+      let allTitles = [];
+      for (const t of topics) {
+        const titles = await searchTopics(t);
+        allTitles = allTitles.concat(titles);
+      }
+      allTitles = [...new Set(allTitles)];
+      if (allTitles.length === 0) {
+        statusDiv.textContent = `No topics found for "${raw}".`;
+        return;
+      }
+      statusDiv.textContent = `Click any title to hear its summary:`;
       resultsDiv.innerHTML = '';
-    });
+      for (const title of allTitles) {
+        const btn = document.createElement('button');
+        btn.textContent = title + " 🔊";
+        btn.addEventListener('click', async () => {
+          const summary = await fetchSummary(title);
+          speak(summary);
+        });
+        resultsDiv.appendChild(btn);
+      }
+    };
 
-    stopBtn.addEventListener('click', () => {
-      if (listening && recognition) recognition.stop();
-    });
-  </script>
+    recognition.onerror = (e) => {
+      statusDiv.textContent = `Error: ${e.error}`;
+      listening = false;
+      stopBtn.disabled = true;
+    };
+
+    recognition.start();
+    listening = true;
+    statusDiv.textContent = "🎤 Listening... speak now then say 'stop'";
+    stopBtn.disabled = false;
+    resultsDiv.innerHTML = '';
+  });
+
+  stopBtn.addEventListener('click', () => {
+    if (listening && recognition) recognition.stop();
+  });
+</script>
 </body>
 </html>
