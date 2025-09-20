@@ -699,73 +699,86 @@ class DetectiveMysteryGame {
     }, 1500 + Math.random() * 1000);
   }
 
-  processUserInput(input) {
-    // Accusation system
-    if (input.includes('i accuse') || input.includes('accuse')) {
-      this.handleAccusation(input);
-      return;
-    }
+processUser Input(input) {
+  // Accusation system
+  if (input.includes('i accuse') || input.includes('accuse')) {
+    this.handleAccusation(input);
+    return;
+  }
 
-    // Evidence questions
-    if (input.includes('knife') || input.includes('weapon')) {
-      this.addMessage('detective', `🔪 The bloody knife suggests this was a crime of passion. The killer grabbed whatever was nearby. Have you found the knife yet?`);
-    }
-    else if (input.includes('letter') || input.includes('threat')) {
-      this.addMessage('detective', `📜 The threatening letter is our best lead. Someone wanted the victim scared before they killed him. The handwriting analysis might reveal the killer's identity.`);
-    }
-    else if (input.includes('fingerprint') || input.includes('print')) {
-      this.addMessage('detective', `👆 Fingerprints don't lie! If we can match these to one of our suspects, we'll have our killer. The print is quite clear - someone was careless.`);
-    }
-    else if (input.includes('watch') || input.includes('time')) {
-      this.addMessage('detective', `⌚ The watch stopped at 11:47 PM - likely when the struggle occurred. Those initials "R.B." are very interesting... Robert, perhaps?`);
-    }
-    else if (input.includes('glass') || input.includes('wine') || input.includes('drink')) {
-      this.addMessage('detective', `🥃 Two glasses, one with lipstick marks. The victim was entertaining someone - but who? This suggests the killer was known to the victim.`);
-    }
-    else if (input.includes('footprint') || input.includes('shoes') || input.includes('heel')) {
-      this.addMessage('detective', `👠 Size 7 high heels... That narrows it down significantly. The killer came from the garden, suggesting they knew the house layout well.`);
-    }
-    else if (input.includes('phone') || input.includes('call') || input.includes('text')) {
-      this.addMessage('detective', `📱 "I know what you did" - a powerful motive for murder. Someone was blackmailing the victim, and he knew too much about their secrets.`);
-    }
-    else if (input.includes('key')) {
-      this.addMessage('detective', `🗝️ This old brass key is puzzling. It doesn't fit any lock we've found. Perhaps it opens something valuable - a safe, a box, or another building?`);
-    }
+  // Evidence questions
+  if (input.includes('knife') || input.includes('weapon')) {
+    this.addMessage('detective', `🔪 The bloody knife suggests this was a crime of passion. The killer grabbed whatever was nearby. Have you found the knife yet?`);
+  }
+  else if (input.includes('letter') || input.includes('threat')) {
+    this.addMessage('detective', `📜 The threatening letter is our best lead. Someone wanted the victim scared before they killed him. The handwriting analysis might reveal the killer's identity.`);
+  }
+  else if (input.includes('fingerprint') || input.includes('print')) {
+    this.addMessage('detective', `👆 Fingerprints don't lie! If we can match these to one of our suspects, we'll have our killer. The print is quite clear - someone was careless.`);
+  }
+  else if (input.includes('watch') || input.includes('time')) {
+    this.addMessage('detective', `⌚ The watch stopped at 11:47 PM - likely when the struggle occurred. Those initials "R.B." are very interesting... Robert, perhaps?`);
+  }
+  else if (input.includes('glass') || input.includes('wine') || input.includes('drink')) {
+    this.addMessage('detective', `🥃 Two glasses, one with lipstick marks. The victim was entertaining someone - but who? This suggests the killer was known to the victim.`);
+  }
+  else if (input.includes('footprint') || input.includes('shoes') || input.includes('heel')) {
+    this.addMessage('detective', `👠 Size 7 high heels... That narrows it down significantly. The killer came from the garden, suggesting they knew the house layout well.`);
+  }
+  else if (input.includes('phone') || input.includes('call') || input.includes('text')) {
+    this.addMessage('detective', `📱 "I know what you did" - a powerful motive for murder. Someone was blackmailing the victim, and he knew too much about their secrets.`);
+  }
+  else if (input.includes('key')) {
+    this.addMessage('detective', `🗝️ This old brass key is puzzling. It doesn't fit any lock we've found. Perhaps it opens something valuable - a safe, a box, or another building?`);
+  }
 
-    // Suspect questions
-    else if (input.includes('margaret') || input.includes('wife')) {
-      this.addMessage('detective', `💰 Margaret Blackwood stands to inherit millions. She claims she was asleep, but she's a light sleeper. The timing is suspicious, and she had the most to gain.`);
-    }
-    else if (input.includes('robert') || input.includes('sterling') || input.includes('business')) {
-      this.addMessage('detective', `💼 Robert Sterling was in a heated business dispute with the victim. He's been seen arguing publicly. His alibi of being at a bar seems convenient... too convenient.`);
-    }
-    else if (input.includes('elena') || input.includes('secretary')) {
-      this.addMessage('detective', `💻 Elena Rodriguez, the secretary, filed a harassment complaint last month. She has access to the house and knows the victim's schedule. Working late gives her no solid alibi.`);
-    }
-    else if (input.includes('james') || input.includes('brother')) {
-      this.addMessage('detective', `🎰 James Blackwood was recently cut from the will. His poker alibi needs verification - gambling debts can drive people to desperate measures.`);
-    }
+  // Suspect questions
+  else if (input.includes('margaret') || input.includes('wife')) {
+    this.addMessage('detective', `💰 Margaret Blackwood stands to inherit millions. She claims she was asleep, but she's a light sleeper. The timing is suspicious, and she had the most to gain.`);
+  }
+  else if (input.includes('robert') || input.includes('sterling') || input.includes('business')) {
+    this.addMessage('detective', `💼 Robert Sterling was in a heated business dispute with the victim. He's been seen arguing publicly. His alibi of being at a bar seems convenient... too convenient.`);
+  }
+  else if (input.includes('elena') || input.includes('secretary')) {
+    this.addMessage('detective', `💻 Elena Rodriguez, the secretary, filed a harassment complaint last month. She has access to the house and knows the victim's schedule. Working late gives her no solid alibi.`);
+  }
+  else if (input.includes('james') || input.includes('brother')) {
+    this.addMessage('detective', `🎰 James Blackwood was recently cut from the will. His poker alibi needs verification - gambling debts can drive people to desperate measures.`);
+  }
 
-    // General investigation questions
-    else if (input.includes('motive') || input.includes('why')) {
-  this.addMessage('detective', "Every suspect has a motive, detective. Financial gain, jealousy, or revenge — it’s up to us to find the strongest link.");
-} else if (input.includes('alibi')) {
-  this.addMessage('detective', "Some alibis seem solid, but they always need verification. Keep an eye out for inconsistencies.");
-} else if (input.includes('evidence')) {
-  this.addMessage('detective', "We’ve collected some clues, but nothing concrete yet. Time to dig deeper.");
-} else if (input.includes('weapon')) {
-  this.addMessage('detective', "The murder weapon hasn’t been found. Could it be hidden somewhere close?");
-} else if (input.includes('timeline') || input.includes('when')) {
-  this.addMessage('detective', "The victim was last seen alive around 9 PM. Narrowing down the timeline will help pinpoint the culprit.");
-} else if (input.includes('suspect') || input.includes('who')) {
-  this.addMessage('detective', "There are several suspects, each with secrets. Which one do you want to investigate further?");
-} else if (input.includes('clue')) {
-  this.addMessage('detective', "Clues are scattered throughout the house. We need to follow up on all leads.");
-} else if (input.includes('alibi') && input.includes('verify')) {
-  this.addMessage('detective', "Verifying alibis is critical. Let's cross-check witness statements and surveillance footage.");
-} else if (input.includes('help') || input.includes('hint')) {
-  this.addMessage('detective', "Try asking about suspects, motives, alibis, or any suspicious activity.");
-} else {
-  // Default fallback response
-  this.addMessage('detective', "I’m not sure what you mean. Try asking about suspects, motives, alibis, or evidence.");
+  // General investigation questions
+  else if (input.includes('motive') || input.includes('why')) {
+    this.addMessage('detective', "Every suspect has a motive, detective. Financial gain, jealousy, or revenge — it’s up to us to find the strongest link.");
+  }
+  else if (input.includes('alibi') && input.includes('verify')) {
+    this.addMessage('detective', "Verifying alibis is critical. Let's cross-check witness statements and surveillance footage.");
+  }
+  else if (input.includes('alibi')) {
+    this.addMessage('detective', "Some alibis seem solid, but they always need verification. Keep an eye out for inconsistencies.");
+  }
+  else if (input.includes('evidence')) {
+    this.addMessage('detective', "We’ve collected some clues, but nothing concrete yet. Time to dig deeper.");
+  }
+  else if (input.includes('weapon')) {
+    this.addMessage('detective', "The murder weapon hasn’t been found. Could it be hidden somewhere close?");
+  }
+  else if (input.includes('timeline') || input.includes('when')) {
+    this.addMessage('detective', "The victim was last seen alive around 9 PM. Narrowing down the timeline will help pinpoint the culprit.");
+  }
+  else if (input.includes('suspect') || input.includes('who')) {
+    this.addMessage('detective', "There are several suspects, each with secrets. Which one do you want to investigate further?");
+  }
+  else if (input.includes('clue')) {
+    this.addMessage('detective', "Clues are scattered throughout the house. We need to follow up on all leads.");
+  }
+  else if (input.includes('help') || input.includes('hint')) {
+    this.addMessage('detective', "Try asking about suspects, motives, alibis, or any suspicious activity.");
+  }
+  else {
+    // Default fallback response
+    this.addMessage('detective', "I’m not sure what you mean. Try asking about suspects, motives, alibis, or evidence.");
+  }
 }
+  </script>
+ </body>
+</html>
