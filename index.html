@@ -43,7 +43,7 @@
     color: #a3a3f7;
     user-select: none;
   }
-  button#listen-btn, button#stop-btn {
+  button#listen-btn, button#stop-btn, button#stop-speak-btn {
     background: linear-gradient(90deg, #f6d365 0%, #fda085 100%);
     border: none;
     border-radius: 30px;
@@ -58,7 +58,8 @@
     user-select: none;
   }
   button#listen-btn:hover:not(:disabled),
-  button#stop-btn:hover:not(:disabled) {
+  button#stop-btn:hover:not(:disabled),
+  button#stop-speak-btn:hover {
     transform: scale(1.05);
     box-shadow: 0 6px 20px rgba(253, 160, 133, 0.7);
   }
@@ -115,6 +116,10 @@
       <button id="listen-btn" aria-pressed="false" aria-label="Start listening for topics">Start Listening</button>
       <button id="stop-btn" disabled aria-label="Stop listening">Stop Listening</button>
     </div>
+    <!-- Always visible Stop Speaking button -->
+    <div style="text-align:center; margin-bottom: 30px;">
+      <button id="stop-speak-btn" aria-label="Stop speaking">Stop Speaking</button>
+    </div>
     <div id="status" aria-live="polite" aria-atomic="true">Click “Start Listening”, say topics (like "Batman and Einstein"), then say “stop”.</div>
     <div id="results" aria-live="polite" aria-atomic="true"></div>
   </div>
@@ -123,6 +128,7 @@
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const listenBtn = document.getElementById('listen-btn');
   const stopBtn = document.getElementById('stop-btn');
+  const stopSpeakBtn = document.getElementById('stop-speak-btn');
   const statusDiv = document.getElementById('status');
   const resultsDiv = document.getElementById('results');
 
@@ -256,7 +262,7 @@
       resultsDiv.innerHTML = '';
       for (const title of allTitles) {
         const btn = document.createElement('button');
-        btn.textContent = title + " 🔊";
+        btn.textContent = title;
         btn.addEventListener('click', async () => {
           const summary = await fetchSummary(title);
           speak(summary);
@@ -280,6 +286,10 @@
 
   stopBtn.addEventListener('click', () => {
     if (listening && recognition) recognition.stop();
+  });
+
+  stopSpeakBtn.addEventListener('click', () => {
+    speechSynthesis.cancel();
   });
 </script>
 </body>
